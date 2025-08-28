@@ -200,6 +200,28 @@ function initializeAIService() {
   aiService = new AIManager();
 }
 
+// Initialize additional services
+let gitService = null;
+let terminalService = null;
+let snippetsService = null;
+let debugService = null;
+
+function initializeServices() {
+  try {
+    const { GitService } = require('./services/git-service');
+    const { TerminalService } = require('./services/terminal-service');
+    const { SnippetsService } = require('./services/snippets-service');
+    
+    gitService = new GitService();
+    terminalService = new TerminalService();
+    snippetsService = new SnippetsService();
+    
+    console.log('All services initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize services:', error);
+  }
+}
+
 // IPC handlers for AI functionality
 ipcMain.handle('ai-complete', async (event, { text, cursorPosition, language }) => {
   try {
@@ -369,11 +391,141 @@ ipcMain.handle('clear-ai-provider', async () => {
   }
 });
 
+// Git service handlers
+ipcMain.handle('git-initialize', async (event, { directoryPath }) => {
+  try {
+    if (!gitService) {
+      throw new Error('Git service not initialized');
+    }
+    
+    const result = await gitService.initialize(directoryPath);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Git initialize error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('git-get-status', async () => {
+  try {
+    if (!gitService) {
+      throw new Error('Git service not initialized');
+    }
+    
+    const result = await gitService.getStatus();
+    return { success: true, result };
+  } catch (error) {
+    console.error('Git status error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('git-get-context', async (event, { filePath }) => {
+  try {
+    if (!gitService) {
+      throw new Error('Git service not initialized');
+    }
+    
+    const result = await gitService.getAIContext(filePath);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Git context error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Terminal service handlers
+ipcMain.handle('terminal-execute', async (event, { command, sessionId }) => {
+  try {
+    if (!terminalService) {
+      throw new Error('Terminal service not initialized');
+    }
+    
+    const result = await terminalService.executeCommand(command, sessionId);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Terminal execute error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('terminal-execute-ai', async (event, { description, sessionId }) => {
+  try {
+    if (!terminalService) {
+      throw new Error('Terminal service not initialized');
+    }
+    
+    const result = await terminalService.executeWithAI(description, sessionId);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Terminal AI execute error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('terminal-get-suggestions', async (event, { partialCommand, context }) => {
+  try {
+    if (!terminalService) {
+      throw new Error('Terminal service not initialized');
+    }
+    
+    const suggestions = terminalService.getCommandSuggestions(partialCommand, context);
+    return { success: true, suggestions };
+  } catch (error) {
+    console.error('Terminal suggestions error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Snippets service handlers
+ipcMain.handle('snippets-create', async (event, { snippetData }) => {
+  try {
+    if (!snippetsService) {
+      throw new Error('Snippets service not initialized');
+    }
+    
+    const result = await snippetsService.createSnippet(snippetData);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Snippets create error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('snippets-get-all', async () => {
+  try {
+    if (!snippetsService) {
+      throw new Error('Snippets service not initialized');
+    }
+    
+    const snippets = snippetsService.getAllSnippets();
+    return { success: true, snippets };
+  } catch (error) {
+    console.error('Snippets get all error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('snippets-search', async (event, { query }) => {
+  try {
+    if (!snippetsService) {
+      throw new Error('Snippets service not initialized');
+    }
+    
+    const snippets = snippetsService.searchSnippets(query);
+    return { success: true, snippets };
+  } catch (error) {
+    console.error('Snippets search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // App event handlers
 app.whenReady().then(() => {
   createWindow();
   createMenu();
   initializeAIService();
+  initializeServices();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

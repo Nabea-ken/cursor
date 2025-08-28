@@ -87,3 +87,39 @@ contextBridge.exposeInMainWorld('utils', {
   // Check if in development mode
   isDev: process.argv.includes('--dev')
 });
+
+// Expose Git service functions
+contextBridge.exposeInMainWorld('git', {
+  initialize: (directoryPath) => 
+    ipcRenderer.invoke('git-initialize', { directoryPath }),
+  
+  getStatus: () => 
+    ipcRenderer.invoke('git-get-status'),
+  
+  getContext: (filePath) => 
+    ipcRenderer.invoke('git-get-context', { filePath })
+});
+
+// Expose Terminal service functions
+contextBridge.exposeInMainWorld('terminal', {
+  execute: (command, sessionId) => 
+    ipcRenderer.invoke('terminal-execute', { command, sessionId }),
+  
+  executeWithAI: (description, sessionId) => 
+    ipcRenderer.invoke('terminal-execute-ai', { description, sessionId }),
+  
+  getSuggestions: (partialCommand, context) => 
+    ipcRenderer.invoke('terminal-get-suggestions', { partialCommand, context })
+});
+
+// Expose Snippets service functions
+contextBridge.exposeInMainWorld('snippets', {
+  create: (snippetData) => 
+    ipcRenderer.invoke('snippets-create', { snippetData }),
+  
+  getAll: () => 
+    ipcRenderer.invoke('snippets-get-all'),
+  
+  search: (query) => 
+    ipcRenderer.invoke('snippets-search', { query })
+});
