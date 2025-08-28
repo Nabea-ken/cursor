@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "monaco-editor": "^0.45.0",
-    "openai": "^4.20.1"
+    "openai": "^4.20.1",
+    "sqlite3": "^5.1.7"
   },
   "build": {
     "appId": "com.cursorclone.app",

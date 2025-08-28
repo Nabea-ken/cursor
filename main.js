@@ -205,16 +205,40 @@ let gitService = null;
 let terminalService = null;
 let snippetsService = null;
 let debugService = null;
+let databaseService = null;
+let collaborationService = null;
+let analyticsService = null;
 
 function initializeServices() {
   try {
     const { GitService } = require('./services/git-service');
     const { TerminalService } = require('./services/terminal-service');
     const { SnippetsService } = require('./services/snippets-service');
+    const { DatabaseService } = require('./services/database-service');
+    const { CollaborationService } = require('./services/collaboration-service');
     
     gitService = new GitService();
     terminalService = new TerminalService();
     snippetsService = new SnippetsService();
+    databaseService = new DatabaseService();
+    collaborationService = new CollaborationService();
+    
+    // Initialize database service
+    databaseService.initialize().then(() => {
+      console.log('Database service initialized');
+    }).catch(error => {
+      console.error('Database initialization failed:', error);
+    });
+    
+    // Initialize collaboration service
+    collaborationService.initialize({
+      userId: `user_${Date.now()}`,
+      userName: 'Developer'
+    }).then(() => {
+      console.log('Collaboration service initialized');
+    }).catch(error => {
+      console.error('Collaboration initialization failed:', error);
+    });
     
     console.log('All services initialized successfully');
   } catch (error) {
@@ -516,6 +540,120 @@ ipcMain.handle('snippets-search', async (event, { query }) => {
     return { success: true, snippets };
   } catch (error) {
     console.error('Snippets search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Database service handlers
+ipcMain.handle('db-set-preference', async (event, { key, value }) => {
+  try {
+    if (!databaseService) {
+      throw new Error('Database service not initialized');
+    }
+    
+    const result = await databaseService.setPreference(key, value);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Database set preference error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-get-preference', async (event, { key, defaultValue }) => {
+  try {
+    if (!databaseService) {
+      throw new Error('Database service not initialized');
+    }
+    
+    const value = await databaseService.getPreference(key, defaultValue);
+    return { success: true, value };
+  } catch (error) {
+    console.error('Database get preference error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-log-ai-interaction', async (event, { interaction }) => {
+  try {
+    if (!databaseService) {
+      throw new Error('Database service not initialized');
+    }
+    
+    const result = await databaseService.logAIInteraction(interaction);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Database log AI interaction error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db-get-analytics', async () => {
+  try {
+    if (!databaseService) {
+      throw new Error('Database service not initialized');
+    }
+    
+    const analytics = await databaseService.getAnalytics();
+    return { success: true, analytics };
+  } catch (error) {
+    console.error('Database get analytics error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Collaboration service handlers
+ipcMain.handle('collab-create-room', async (event, { roomConfig }) => {
+  try {
+    if (!collaborationService) {
+      throw new Error('Collaboration service not initialized');
+    }
+    
+    const result = await collaborationService.createRoom(roomConfig);
+    return result;
+  } catch (error) {
+    console.error('Collaboration create room error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('collab-join-room', async (event, { roomId, password }) => {
+  try {
+    if (!collaborationService) {
+      throw new Error('Collaboration service not initialized');
+    }
+    
+    const result = await collaborationService.joinRoom(roomId, password);
+    return result;
+  } catch (error) {
+    console.error('Collaboration join room error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('collab-send-message', async (event, { roomId, message }) => {
+  try {
+    if (!collaborationService) {
+      throw new Error('Collaboration service not initialized');
+    }
+    
+    const result = await collaborationService.sendMessage(roomId, message);
+    return result;
+  } catch (error) {
+    console.error('Collaboration send message error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('collab-get-rooms', async () => {
+  try {
+    if (!collaborationService) {
+      throw new Error('Collaboration service not initialized');
+    }
+    
+    const result = await collaborationService.getAllRooms();
+    return result;
+  } catch (error) {
+    console.error('Collaboration get rooms error:', error);
     return { success: false, error: error.message };
   }
 });

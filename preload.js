@@ -123,3 +123,33 @@ contextBridge.exposeInMainWorld('snippets', {
   search: (query) => 
     ipcRenderer.invoke('snippets-search', { query })
 });
+
+// Expose Database service functions
+contextBridge.exposeInMainWorld('database', {
+  setPreference: (key, value) => 
+    ipcRenderer.invoke('db-set-preference', { key, value }),
+  
+  getPreference: (key, defaultValue) => 
+    ipcRenderer.invoke('db-get-preference', { key, defaultValue }),
+  
+  logAIInteraction: (interaction) => 
+    ipcRenderer.invoke('db-log-ai-interaction', { interaction }),
+  
+  getAnalytics: () => 
+    ipcRenderer.invoke('db-get-analytics')
+});
+
+// Expose Collaboration service functions
+contextBridge.exposeInMainWorld('collaboration', {
+  createRoom: (roomConfig) => 
+    ipcRenderer.invoke('collab-create-room', { roomConfig }),
+  
+  joinRoom: (roomId, password) => 
+    ipcRenderer.invoke('collab-join-room', { roomId, password }),
+  
+  sendMessage: (roomId, message) => 
+    ipcRenderer.invoke('collab-send-message', { roomId, message }),
+  
+  getRooms: () => 
+    ipcRenderer.invoke('collab-get-rooms')
+});
