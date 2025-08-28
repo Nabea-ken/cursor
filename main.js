@@ -196,8 +196,8 @@ function createMenu() {
 
 // Initialize AI service
 function initializeAIService() {
-  const { AIService } = require('./services/ai-service');
-  aiService = new AIService();
+  const { AIManager } = require('./services/ai-manager');
+  aiService = new AIManager();
 }
 
 // IPC handlers for AI functionality
@@ -281,6 +281,91 @@ ipcMain.handle('get-api-key-status', async () => {
     return { hasKey };
   } catch (error) {
     return { hasKey: false };
+  }
+});
+
+// New AI provider handlers
+ipcMain.handle('ai-generate', async (event, { description, language }) => {
+  try {
+    if (!aiService) {
+      throw new Error('AI service not initialized');
+    }
+    
+    const generatedCode = await aiService.generateCode(description, language);
+    return { success: true, generatedCode };
+  } catch (error) {
+    console.error('AI generate error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('initialize-ai-provider', async (event, { providerType, config }) => {
+  try {
+    if (!aiService) {
+      throw new Error('AI service not initialized');
+    }
+    
+    const result = await aiService.initializeProvider(providerType, config);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Initialize AI provider error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('test-ai-connection', async (event, { providerType, config }) => {
+  try {
+    if (!aiService) {
+      throw new Error('AI service not initialized');
+    }
+    
+    const result = await aiService.testConnection(providerType, config);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Test AI connection error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-ai-provider-info', async () => {
+  try {
+    if (!aiService) {
+      return { type: null, name: 'None', status: 'Not configured' };
+    }
+    
+    const info = aiService.getCurrentProviderInfo();
+    return { success: true, info };
+  } catch (error) {
+    console.error('Get AI provider info error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-available-models', async (event, { providerType }) => {
+  try {
+    if (!aiService) {
+      return { models: [] };
+    }
+    
+    const models = await aiService.getAvailableModels(providerType);
+    return { success: true, models };
+  } catch (error) {
+    console.error('Get available models error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('clear-ai-provider', async () => {
+  try {
+    if (!aiService) {
+      return { success: true };
+    }
+    
+    aiService.clearProvider();
+    return { success: true };
+  } catch (error) {
+    console.error('Clear AI provider error:', error);
+    return { success: false, error: error.message };
   }
 });
 

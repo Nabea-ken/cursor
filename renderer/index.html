@@ -12,6 +12,9 @@
         <!-- Top toolbar -->
         <div id="toolbar">
             <div class="toolbar-left">
+                <button id="toggle-explorer-btn" class="toolbar-btn" title="Toggle File Explorer">
+                    <i class="fas fa-folder"></i>
+                </button>
                 <button id="new-file-btn" class="toolbar-btn" title="New File (Ctrl+N)">
                     <i class="fas fa-file"></i>
                 </button>
@@ -25,6 +28,9 @@
                 <span id="file-name" class="file-name">Untitled</span>
             </div>
             <div class="toolbar-right">
+                <button id="ai-provider-btn" class="toolbar-btn" title="AI Provider Settings">
+                    <i class="fas fa-robot"></i>
+                </button>
                 <button id="api-key-btn" class="toolbar-btn" title="Set API Key">
                     <i class="fas fa-key"></i>
                 </button>
@@ -36,6 +42,32 @@
 
         <!-- Main content area -->
         <div id="main-content">
+            <!-- File Explorer Panel -->
+            <div id="explorer-panel" class="explorer-panel">
+                <div class="explorer-header">
+                    <h3><i class="fas fa-folder"></i> Explorer</h3>
+                    <button id="close-explorer-btn" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="explorer-content">
+                    <div class="explorer-actions">
+                        <button id="new-folder-btn" class="explorer-btn" title="New Folder">
+                            <i class="fas fa-folder-plus"></i>
+                        </button>
+                        <button id="refresh-explorer-btn" class="explorer-btn" title="Refresh">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="file-tree" class="file-tree">
+                        <div class="file-tree-item">
+                            <i class="fas fa-folder"></i>
+                            <span>No folder opened</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Editor container -->
             <div id="editor-container">
                 <div id="monaco-editor"></div>
@@ -54,10 +86,18 @@
                         <i class="fas fa-robot"></i>
                         <h4>Welcome to Cursor Clone!</h4>
                         <p>I'm your AI programming assistant. Ask me anything about your code, request refactoring, or get explanations.</p>
+                        <div class="ai-providers-info">
+                            <h5>Available AI Providers:</h5>
+                            <ul>
+                                <li><strong>OpenAI</strong> - GPT-4o-mini (requires API key)</li>
+                                <li><strong>Ollama</strong> - Local models (free)</li>
+                                <li><strong>HuggingFace</strong> - Open source models (free)</li>
+                            </ul>
+                        </div>
                         <div class="api-key-notice" id="api-key-notice">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <span>Please set your OpenAI API key to start using AI features.</span>
-                            <button id="set-api-key-chat-btn" class="btn-primary">Set API Key</button>
+                            <span>Please set your AI provider to start using AI features.</span>
+                            <button id="set-ai-provider-btn" class="btn-primary">Configure AI</button>
                         </div>
                     </div>
                 </div>
@@ -75,6 +115,9 @@
                         <button id="send-file-btn" class="action-btn" title="Send entire file as context">
                             <i class="fas fa-file-code"></i> Send File
                         </button>
+                        <button id="generate-code-btn" class="action-btn" title="Generate code">
+                            <i class="fas fa-magic"></i> Generate
+                        </button>
                     </div>
                 </div>
             </div>
@@ -85,6 +128,7 @@
             <div class="status-left">
                 <span id="cursor-position">Ln 1, Col 1</span>
                 <span id="file-language">JavaScript</span>
+                <span id="ai-provider-status">AI: Not configured</span>
             </div>
             <div class="status-right">
                 <span id="ai-status" class="ai-status">
@@ -94,24 +138,83 @@
         </div>
     </div>
 
-    <!-- API Key Modal -->
-    <div id="api-key-modal" class="modal">
+    <!-- AI Provider Modal -->
+    <div id="ai-provider-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-key"></i> Set OpenAI API Key</h3>
-                <button id="close-modal-btn" class="close-btn">
+                <h3><i class="fas fa-robot"></i> AI Provider Configuration</h3>
+                <button id="close-ai-modal-btn" class="close-btn">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
-                <p>Enter your OpenAI API key to enable AI features like code completion, chat, and refactoring.</p>
-                <div class="input-group">
-                    <label for="api-key-input">API Key:</label>
-                    <input type="password" id="api-key-input" placeholder="sk-..." />
+                <div class="ai-provider-tabs">
+                    <button class="tab-btn active" data-tab="openai">OpenAI</button>
+                    <button class="tab-btn" data-tab="ollama">Ollama (Local)</button>
+                    <button class="tab-btn" data-tab="huggingface">HuggingFace</button>
                 </div>
+                
+                <div class="tab-content active" id="openai-tab">
+                    <h4>OpenAI Configuration</h4>
+                    <p>Use OpenAI's GPT models for AI assistance. Requires API key.</p>
+                    <div class="input-group">
+                        <label for="openai-api-key">API Key:</label>
+                        <input type="password" id="openai-api-key" placeholder="sk-..." />
+                    </div>
+                    <div class="input-group">
+                        <label for="openai-model">Model:</label>
+                        <select id="openai-model">
+                            <option value="gpt-4o-mini">GPT-4o-mini (Recommended)</option>
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5-turbo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="ollama-tab">
+                    <h4>Ollama Configuration</h4>
+                    <p>Use local AI models with Ollama. Free and runs locally.</p>
+                    <div class="input-group">
+                        <label for="ollama-url">Ollama URL:</label>
+                        <input type="text" id="ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434" />
+                    </div>
+                    <div class="input-group">
+                        <label for="ollama-model">Model:</label>
+                        <select id="ollama-model">
+                            <option value="codellama">CodeLlama (Recommended)</option>
+                            <option value="llama2">Llama2</option>
+                            <option value="mistral">Mistral</option>
+                            <option value="phi">Phi-2</option>
+                        </select>
+                    </div>
+                    <div class="ollama-install-info">
+                        <h5>Install Ollama:</h5>
+                        <p>Download from <a href="https://ollama.ai" target="_blank">ollama.ai</a></p>
+                        <p>Then run: <code>ollama pull codellama</code></p>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="huggingface-tab">
+                    <h4>HuggingFace Configuration</h4>
+                    <p>Use open source models from HuggingFace. Free tier available.</p>
+                    <div class="input-group">
+                        <label for="hf-api-key">API Key (Optional):</label>
+                        <input type="password" id="hf-api-key" placeholder="hf_..." />
+                    </div>
+                    <div class="input-group">
+                        <label for="hf-model">Model:</label>
+                        <select id="hf-model">
+                            <option value="microsoft/DialoGPT-medium">DialoGPT (Chat)</option>
+                            <option value="gpt2">GPT-2</option>
+                            <option value="microsoft/DialoGPT-small">DialoGPT Small</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="modal-actions">
-                    <button id="save-api-key-btn" class="btn-primary">Save API Key</button>
-                    <button id="cancel-api-key-btn" class="btn-secondary">Cancel</button>
+                    <button id="save-ai-config-btn" class="btn-primary">Save Configuration</button>
+                    <button id="test-ai-connection-btn" class="btn-secondary">Test Connection</button>
+                    <button id="cancel-ai-config-btn" class="btn-secondary">Cancel</button>
                 </div>
             </div>
         </div>
@@ -124,6 +227,12 @@
         </div>
         <div class="context-menu-item" id="explain-menu-item">
             <i class="fas fa-question-circle"></i> Explain Code
+        </div>
+        <div class="context-menu-item" id="generate-menu-item">
+            <i class="fas fa-plus"></i> Generate Code
+        </div>
+        <div class="context-menu-item" id="optimize-menu-item">
+            <i class="fas fa-rocket"></i> Optimize Code
         </div>
         <div class="context-menu-separator"></div>
         <div class="context-menu-item" id="copy-menu-item">

@@ -19,6 +19,26 @@ contextBridge.exposeInMainWorld('ai', {
   explainCode: (code, language) => 
     ipcRenderer.invoke('ai-explain', { code, language }),
   
+  // Code generation
+  generateCode: (description, language) => 
+    ipcRenderer.invoke('ai-generate', { description, language }),
+  
+  // AI provider management
+  initializeProvider: (providerType, config) => 
+    ipcRenderer.invoke('initialize-ai-provider', { providerType, config }),
+  
+  testConnection: (providerType, config) => 
+    ipcRenderer.invoke('test-ai-connection', { providerType, config }),
+  
+  getProviderInfo: () => 
+    ipcRenderer.invoke('get-ai-provider-info'),
+  
+  getAvailableModels: (providerType) => 
+    ipcRenderer.invoke('get-available-models', { providerType }),
+  
+  clearProvider: () => 
+    ipcRenderer.invoke('clear-ai-provider'),
+  
   // API key management
   setApiKey: (apiKey) => 
     ipcRenderer.invoke('set-api-key', apiKey),
