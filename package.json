@@ -1,0 +1,52 @@
+{
+  "name": "cursor-clone",
+  "version": "1.0.0",
+  "description": "A VS Code-like editor with AI assistance built with Electron and Monaco Editor",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "monaco-editor",
+    "ai",
+    "code-editor",
+    "cursor-clone"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.45.0",
+    "openai": "^4.20.1"
+  },
+  "build": {
+    "appId": "com.cursorclone.app",
+    "productName": "Cursor Clone",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
