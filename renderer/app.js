@@ -5,11 +5,26 @@ let currentLanguage = 'javascript';
 let chatPanelVisible = false;
 let apiKeySet = false;
 let completionTimeout = null;
+let tabs = [];
+let activeTabId = null;
+let tabCounter = 0;
+let currentWorkspace = null;
+let fileTreeData = [];
 
 // DOM elements
 const elements = {
     // Editor
     editorContainer: document.getElementById('monaco-editor'),
+    tabsContainer: document.getElementById('tabs-container'),
+    newTabBtn: document.getElementById('new-tab-btn'),
+    
+    // File Explorer
+    toggleExplorerBtn: document.getElementById('toggle-explorer-btn'),
+    explorerPanel: document.getElementById('explorer-panel'),
+    closeExplorerBtn: document.getElementById('close-explorer-btn'),
+    newFolderBtn: document.getElementById('new-folder-btn'),
+    refreshExplorerBtn: document.getElementById('refresh-explorer-btn'),
+    fileTree: document.getElementById('file-tree'),
     
     // Toolbar
     newFileBtn: document.getElementById('new-file-btn'),
@@ -51,7 +66,91 @@ const elements = {
     pasteMenuItem: document.getElementById('paste-menu-item'),
     
     // Loading
-    loadingOverlay: document.getElementById('loading-overlay')
+    loadingOverlay: document.getElementById('loading-overlay'),
+    
+    // AI Configuration elements
+    aiProviderSelect: document.getElementById('ai-provider-select'),
+    aiModelSelect: document.getElementById('ai-model-select'),
+    aiTemperature: document.getElementById('ai-temperature'),
+    temperatureValue: document.getElementById('temperature-value'),
+    aiProviderStatus: document.getElementById('ai-provider-status'),
+    
+    // AI Provider Modal elements
+    aiProviderModal: document.getElementById('ai-provider-modal'),
+    closeAiModalBtn: document.getElementById('close-ai-modal-btn'),
+    saveAiConfigBtn: document.getElementById('save-ai-config-btn'),
+    testAiConnectionBtn: document.getElementById('test-ai-connection-btn'),
+    cancelAiConfigBtn: document.getElementById('cancel-ai-config-btn'),
+    aiProviderBtn: document.getElementById('ai-provider-btn'),
+    
+    // Search elements
+    searchBtn: document.getElementById('search-btn'),
+    searchBar: document.getElementById('search-bar'),
+    searchInput: document.getElementById('search-input'),
+    searchPrev: document.getElementById('search-prev'),
+    searchNext: document.getElementById('search-next'),
+    searchReplace: document.getElementById('search-replace'),
+    searchClose: document.getElementById('search-close'),
+    replaceContainer: document.getElementById('replace-container'),
+    replaceInput: document.getElementById('replace-input'),
+    replaceAll: document.getElementById('replace-all'),
+    
+    // Terminal elements
+    toggleTerminalBtn: document.getElementById('toggle-terminal-btn'),
+    terminalPanel: document.getElementById('terminal-panel'),
+    closeTerminalBtn: document.getElementById('close-terminal-btn'),
+    terminalOutput: document.getElementById('terminal-output'),
+    terminalInput: document.getElementById('terminal-input'),
+    sendTerminalBtn: document.getElementById('send-terminal-btn'),
+    clearTerminalBtn: document.getElementById('clear-terminal-btn'),
+    aiSuggestBtn: document.getElementById('ai-suggest-btn'),
+    executeCommandBtn: document.getElementById('execute-command-btn'),
+    
+    // Debug elements
+    toggleDebugBtn: document.getElementById('toggle-debug-btn'),
+    debugPanel: document.getElementById('debug-panel'),
+    closeDebugBtn: document.getElementById('close-debug-btn'),
+    analyzeCurrentFileBtn: document.getElementById('analyze-current-file'),
+    analyzeSelectedCodeBtn: document.getElementById('analyze-selected-code'),
+    analysisResults: document.getElementById('analysis-results'),
+    summaryContent: document.getElementById('summary-content'),
+    issuesList: document.getElementById('issues-list'),
+    suggestionsList: document.getElementById('suggestions-list'),
+    debugLogsList: document.getElementById('debug-logs-list'),
+    clearIssuesBtn: document.getElementById('clear-issues'),
+    refreshSuggestionsBtn: document.getElementById('refresh-suggestions'),
+    clearLogsBtn: document.getElementById('clear-logs'),
+    exportLogsBtn: document.getElementById('export-logs'),
+    
+    // Snippets elements
+    toggleSnippetsBtn: document.getElementById('toggle-snippets-btn'),
+    snippetsPanel: document.getElementById('snippets-panel'),
+    closeSnippetsBtn: document.getElementById('close-snippets-btn'),
+    snippetsSearchInput: document.getElementById('snippets-search-input'),
+    snippetsLanguageFilter: document.getElementById('snippets-language-filter'),
+    snippetsCategoryFilter: document.getElementById('snippets-category-filter'),
+    snippetsList: document.getElementById('snippets-list'),
+    snippetName: document.getElementById('snippet-name'),
+    snippetDescription: document.getElementById('snippet-description'),
+    snippetLanguage: document.getElementById('snippet-language'),
+    snippetCategory: document.getElementById('snippet-category'),
+    snippetCode: document.getElementById('snippet-code'),
+    snippetTags: document.getElementById('snippet-tags'),
+    saveSnippetBtn: document.getElementById('save-snippet-btn'),
+    clearSnippetFormBtn: document.getElementById('clear-snippet-form-btn'),
+    aiSnippetDescription: document.getElementById('ai-snippet-description'),
+    aiSnippetLanguage: document.getElementById('ai-snippet-language'),
+    aiSnippetCategory: document.getElementById('ai-snippet-category'),
+    generateSnippetBtn: document.getElementById('generate-snippet-btn'),
+    aiGeneratedSnippet: document.getElementById('ai-generated-snippet'),
+    useGeneratedSnippetBtn: document.getElementById('use-generated-snippet'),
+    
+    // Analytics elements
+    toggleAnalyticsBtn: document.getElementById('toggle-analytics-btn'),
+    analyticsPanel: document.getElementById('analytics-panel'),
+    closeAnalyticsBtn: document.getElementById('close-analytics-btn'),
+    refreshAnalyticsBtn: document.getElementById('refresh-analytics'),
+    exportAnalyticsBtn: document.getElementById('export-analytics')
 };
 
 // Initialize the application
@@ -68,8 +167,8 @@ async function init() {
         // Check API key status
         await checkApiKeyStatus();
         
-        // Load default content
-        loadDefaultContent();
+        // Create initial tab
+        createTab(null, loadDefaultContent(), 'javascript');
         
         showLoading(false);
     } catch (error) {
@@ -188,6 +287,25 @@ function setupEventListeners() {
     elements.saveFileBtn.addEventListener('click', saveFile);
     elements.apiKeyBtn.addEventListener('click', showApiKeyModal);
     elements.toggleChatBtn.addEventListener('click', toggleChatPanel);
+    
+    // Tab buttons
+    if (elements.newTabBtn) {
+        elements.newTabBtn.addEventListener('click', newFile);
+    }
+    
+    // File Explorer buttons
+    if (elements.toggleExplorerBtn) {
+        elements.toggleExplorerBtn.addEventListener('click', toggleExplorerPanel);
+    }
+    if (elements.closeExplorerBtn) {
+        elements.closeExplorerBtn.addEventListener('click', hideExplorerPanel);
+    }
+    if (elements.newFolderBtn) {
+        elements.newFolderBtn.addEventListener('click', createNewFolder);
+    }
+    if (elements.refreshExplorerBtn) {
+        elements.refreshExplorerBtn.addEventListener('click', refreshFileTree);
+    }
 
     // Chat panel
     elements.closeChatBtn.addEventListener('click', hideChatPanel);
@@ -212,6 +330,168 @@ function setupEventListeners() {
     elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
     elements.cancelApiKeyBtn.addEventListener('click', hideApiKeyModal);
     elements.closeModalBtn.addEventListener('click', hideApiKeyModal);
+    
+    // AI Provider Modal
+    if (elements.aiProviderBtn) {
+        elements.aiProviderBtn.addEventListener('click', showAiProviderModal);
+    }
+    if (elements.closeAiModalBtn) {
+        elements.closeAiModalBtn.addEventListener('click', hideAiProviderModal);
+    }
+    if (elements.saveAiConfigBtn) {
+        elements.saveAiConfigBtn.addEventListener('click', saveAiConfig);
+    }
+    if (elements.testAiConnectionBtn) {
+        elements.testAiConnectionBtn.addEventListener('click', testAiConnection);
+    }
+    if (elements.cancelAiConfigBtn) {
+        elements.cancelAiConfigBtn.addEventListener('click', hideAiProviderModal);
+    }
+    
+    // AI Provider Modal tab switching
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn')) {
+            switchAiProviderTab(e.target.dataset.tab);
+        }
+    });
+    
+    // Search functionality
+    if (elements.searchBtn) {
+        elements.searchBtn.addEventListener('click', toggleSearchBar);
+    }
+    if (elements.searchClose) {
+        elements.searchClose.addEventListener('click', hideSearchBar);
+    }
+    if (elements.searchInput) {
+        elements.searchInput.addEventListener('input', performSearch);
+        elements.searchInput.addEventListener('keydown', handleSearchKeydown);
+    }
+    if (elements.searchNext) {
+        elements.searchNext.addEventListener('click', findNext);
+    }
+    if (elements.searchPrev) {
+        elements.searchPrev.addEventListener('click', findPrevious);
+    }
+    if (elements.searchReplace) {
+        elements.searchReplace.addEventListener('click', toggleReplace);
+    }
+    if (elements.replaceAll) {
+        elements.replaceAll.addEventListener('click', replaceAll);
+    }
+
+    // Terminal functionality
+    if (elements.toggleTerminalBtn) {
+        elements.toggleTerminalBtn.addEventListener('click', toggleTerminalPanel);
+    }
+    if (elements.closeTerminalBtn) {
+        elements.closeTerminalBtn.addEventListener('click', hideTerminalPanel);
+    }
+    if (elements.terminalInput) {
+        elements.terminalInput.addEventListener('keydown', handleTerminalKeydown);
+        elements.terminalInput.addEventListener('input', updateTerminalSendButton);
+    }
+    if (elements.sendTerminalBtn) {
+        elements.sendTerminalBtn.addEventListener('click', sendTerminalMessage);
+    }
+    if (elements.clearTerminalBtn) {
+        elements.clearTerminalBtn.addEventListener('click', clearTerminal);
+    }
+    if (elements.aiSuggestBtn) {
+        elements.aiSuggestBtn.addEventListener('click', getAiCommandSuggestions);
+    }
+    if (elements.executeCommandBtn) {
+        elements.executeCommandBtn.addEventListener('click', executeLastCommand);
+    }
+
+    // Debug functionality
+    if (elements.toggleDebugBtn) {
+        elements.toggleDebugBtn.addEventListener('click', toggleDebugPanel);
+    }
+    if (elements.closeDebugBtn) {
+        elements.closeDebugBtn.addEventListener('click', hideDebugPanel);
+    }
+    if (elements.analyzeCurrentFileBtn) {
+        elements.analyzeCurrentFileBtn.addEventListener('click', analyzeCurrentFile);
+    }
+    if (elements.analyzeSelectedCodeBtn) {
+        elements.analyzeSelectedCodeBtn.addEventListener('click', analyzeSelectedCode);
+    }
+    if (elements.clearIssuesBtn) {
+        elements.clearIssuesBtn.addEventListener('click', clearIssues);
+    }
+    if (elements.refreshSuggestionsBtn) {
+        elements.refreshSuggestionsBtn.addEventListener('click', refreshSuggestions);
+    }
+    if (elements.clearLogsBtn) {
+        elements.clearLogsBtn.addEventListener('click', clearDebugLogs);
+    }
+    if (elements.exportLogsBtn) {
+        elements.exportLogsBtn.addEventListener('click', exportDebugLogs);
+    }
+
+    // Debug tab switching
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('debug-tab-btn')) {
+            switchDebugTab(e.target.dataset.tab);
+        }
+    });
+
+    // Snippets functionality
+    if (elements.toggleSnippetsBtn) {
+        elements.toggleSnippetsBtn.addEventListener('click', toggleSnippetsPanel);
+    }
+    if (elements.closeSnippetsBtn) {
+        elements.closeSnippetsBtn.addEventListener('click', hideSnippetsPanel);
+    }
+    if (elements.snippetsSearchInput) {
+        elements.snippetsSearchInput.addEventListener('input', filterSnippets);
+    }
+    if (elements.snippetsLanguageFilter) {
+        elements.snippetsLanguageFilter.addEventListener('change', filterSnippets);
+    }
+    if (elements.snippetsCategoryFilter) {
+        elements.snippetsCategoryFilter.addEventListener('change', filterSnippets);
+    }
+    if (elements.saveSnippetBtn) {
+        elements.saveSnippetBtn.addEventListener('click', saveSnippet);
+    }
+    if (elements.clearSnippetFormBtn) {
+        elements.clearSnippetFormBtn.addEventListener('click', clearSnippetForm);
+    }
+    if (elements.generateSnippetBtn) {
+        elements.generateSnippetBtn.addEventListener('click', generateAISnippet);
+    }
+    if (elements.useGeneratedSnippetBtn) {
+        elements.useGeneratedSnippetBtn.addEventListener('click', useGeneratedSnippet);
+    }
+
+    // Snippets tab switching
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('snippets-tab-btn')) {
+            switchSnippetsTab(e.target.dataset.tab);
+        }
+    });
+
+    // Analytics functionality
+    if (elements.toggleAnalyticsBtn) {
+        elements.toggleAnalyticsBtn.addEventListener('click', toggleAnalyticsPanel);
+    }
+    if (elements.closeAnalyticsBtn) {
+        elements.closeAnalyticsBtn.addEventListener('click', hideAnalyticsPanel);
+    }
+    if (elements.refreshAnalyticsBtn) {
+        elements.refreshAnalyticsBtn.addEventListener('click', refreshAnalytics);
+    }
+    if (elements.exportAnalyticsBtn) {
+        elements.exportAnalyticsBtn.addEventListener('click', exportAnalytics);
+    }
+
+    // Analytics tab switching
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('analytics-tab-btn')) {
+            switchAnalyticsTab(e.target.dataset.tab);
+        }
+    });
 
     // Context menu
     elements.refactorMenuItem.addEventListener('click', refactorSelectedCode);
@@ -223,10 +503,11 @@ function setupEventListeners() {
     // File operations from menu
     window.file.onNewFile(() => newFile());
     window.file.onFileOpened((event, data) => {
-        currentFilePath = data.path;
-        editor.setValue(data.content);
-        elements.fileName.textContent = getFileName(data.path);
-        setLanguageFromFile(data.path);
+        const language = getLanguageFromFile(data.path);
+        createTab(data.path, data.content, language);
+    });
+    window.file.onFolderOpened((event, data) => {
+        openWorkspace(data.path);
     });
     window.file.onSaveFile(() => saveFile());
     window.file.onSaveAs((event, data) => saveFileAs(data.path));
@@ -273,24 +554,283 @@ function handleKeyboardShortcuts(e) {
                 e.preventDefault();
                 toggleChatPanel();
                 break;
+            case 'f':
+                e.preventDefault();
+                toggleSearchBar();
+                break;
         }
+    }
+}
+
+// Tab management functions
+function createTab(filePath = null, content = '', language = 'javascript') {
+    const tabId = `tab_${++tabCounter}`;
+    const fileName = filePath ? getFileName(filePath) : 'Untitled';
+    
+    const tab = {
+        id: tabId,
+        filePath: filePath,
+        content: content,
+        language: language,
+        isDirty: false
+    };
+    
+    tabs.push(tab);
+    
+    // Create tab element
+    const tabElement = document.createElement('div');
+    tabElement.className = 'tab';
+    tabElement.id = `tab-${tabId}`;
+    tabElement.innerHTML = `
+        <span class="tab-name">${fileName}</span>
+        <button class="tab-close" onclick="closeTab('${tabId}')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    tabElement.addEventListener('click', (e) => {
+        if (!e.target.closest('.tab-close')) {
+            switchToTab(tabId);
+        }
+    });
+    
+    elements.tabsContainer.appendChild(tabElement);
+    switchToTab(tabId);
+    
+    return tabId;
+}
+
+function switchToTab(tabId) {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    
+    // Save current tab content
+    if (activeTabId) {
+        const currentTab = tabs.find(t => t.id === activeTabId);
+        if (currentTab && editor) {
+            currentTab.content = editor.getValue();
+        }
+    }
+    
+    // Switch to new tab
+    activeTabId = tabId;
+    
+    // Update editor content
+    if (editor) {
+        editor.setValue(tab.content);
+        monaco.editor.setModelLanguage(editor.getModel(), tab.language);
+    }
+    
+    // Update UI
+    updateTabUI();
+    updateFileInfo(tab);
+}
+
+function closeTab(tabId) {
+    const tabIndex = tabs.findIndex(t => t.id === tabId);
+    if (tabIndex === -1) return;
+    
+    const tab = tabs[tabIndex];
+    const tabElement = document.getElementById(`tab-${tabId}`);
+    
+    // Remove tab element
+    if (tabElement) {
+        tabElement.remove();
+    }
+    
+    // Remove from tabs array
+    tabs.splice(tabIndex, 1);
+    
+    // If this was the active tab, switch to another
+    if (activeTabId === tabId) {
+        if (tabs.length > 0) {
+            const newActiveIndex = Math.min(tabIndex, tabs.length - 1);
+            switchToTab(tabs[newActiveIndex].id);
+        } else {
+            // No tabs left, create a new one
+            createTab();
+        }
+    }
+}
+
+function updateTabUI() {
+    // Update tab active states
+    document.querySelectorAll('.tab').forEach(tabEl => {
+        tabEl.classList.remove('active');
+    });
+    
+    if (activeTabId) {
+        const activeTabEl = document.getElementById(`tab-${activeTabId}`);
+        if (activeTabEl) {
+            activeTabEl.classList.add('active');
+        }
+    }
+}
+
+function updateFileInfo(tab) {
+    currentFilePath = tab.filePath;
+    currentLanguage = tab.language;
+    
+    if (elements.fileName) {
+        elements.fileName.textContent = tab.filePath ? getFileName(tab.filePath) : 'Untitled';
+    }
+    
+    if (elements.fileLanguage) {
+        elements.fileLanguage.textContent = tab.language.charAt(0).toUpperCase() + tab.language.slice(1);
+    }
+}
+
+// File Explorer functions
+function toggleExplorerPanel() {
+    if (elements.explorerPanel.classList.contains('show')) {
+        hideExplorerPanel();
+    } else {
+        showExplorerPanel();
+    }
+}
+
+function showExplorerPanel() {
+    elements.explorerPanel.classList.add('show');
+    elements.toggleExplorerBtn.classList.add('active');
+}
+
+function hideExplorerPanel() {
+    elements.explorerPanel.classList.remove('show');
+    elements.toggleExplorerBtn.classList.remove('active');
+}
+
+async function openWorkspace(folderPath) {
+    try {
+        currentWorkspace = folderPath;
+        await loadFileTree(folderPath);
+        showExplorerPanel();
+        showSuccess(`Workspace opened: ${getFileName(folderPath)}`);
+    } catch (error) {
+        console.error('Error opening workspace:', error);
+        showError('Failed to open workspace: ' + error.message);
+    }
+}
+
+async function loadFileTree(folderPath) {
+    try {
+        // Request file tree from main process
+        const result = await window.file.getFileTree(folderPath);
+        if (result.success) {
+            fileTreeData = result.tree;
+            renderFileTree(fileTreeData);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Error loading file tree:', error);
+        throw error;
+    }
+}
+
+function renderFileTree(tree, container = null) {
+    if (!container) {
+        container = elements.fileTree;
+        container.innerHTML = '';
+    }
+    
+    tree.forEach(item => {
+        const itemElement = document.createElement('div');
+        itemElement.className = `file-tree-item ${item.type}`;
+        itemElement.innerHTML = `
+            <i class="fas ${item.type === 'folder' ? 'fa-folder' : 'fa-file'}"></i>
+            <span>${item.name}</span>
+        `;
+        
+        if (item.type === 'file') {
+            itemElement.addEventListener('click', () => openFileFromTree(item.path));
+        } else if (item.type === 'folder') {
+            itemElement.addEventListener('click', () => toggleFolder(item, itemElement));
+        }
+        
+        container.appendChild(itemElement);
+        
+        // Add children if folder is expanded
+        if (item.type === 'folder' && item.expanded && item.children) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'file-tree-children';
+            childrenContainer.style.paddingLeft = '20px';
+            itemElement.appendChild(childrenContainer);
+            renderFileTree(item.children, childrenContainer);
+        }
+    });
+}
+
+function toggleFolder(folder, element) {
+    const childrenContainer = element.querySelector('.file-tree-children');
+    
+    if (childrenContainer) {
+        // Folder is expanded, collapse it
+        childrenContainer.remove();
+        folder.expanded = false;
+    } else {
+        // Folder is collapsed, expand it
+        if (folder.children && folder.children.length > 0) {
+            const newChildrenContainer = document.createElement('div');
+            newChildrenContainer.className = 'file-tree-children';
+            newChildrenContainer.style.paddingLeft = '20px';
+            element.appendChild(newChildrenContainer);
+            renderFileTree(folder.children, newChildrenContainer);
+            folder.expanded = true;
+        }
+    }
+}
+
+async function openFileFromTree(filePath) {
+    try {
+        const result = await window.file.openFileFromPath(filePath);
+        if (result.success) {
+            const language = getLanguageFromFile(filePath);
+            createTab(filePath, result.content, language);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Error opening file from tree:', error);
+        showError('Failed to open file: ' + error.message);
+    }
+}
+
+function createNewFolder() {
+    if (!currentWorkspace) {
+        showError('Please open a workspace first');
+        return;
+    }
+    
+    const folderName = prompt('Enter folder name:');
+    if (folderName) {
+        // TODO: Implement folder creation
+        showError('Folder creation not yet implemented');
+    }
+}
+
+function refreshFileTree() {
+    if (currentWorkspace) {
+        loadFileTree(currentWorkspace);
     }
 }
 
 // File operations
 function newFile() {
-    currentFilePath = null;
-    editor.setValue('');
-    elements.fileName.textContent = 'Untitled';
-    currentLanguage = 'javascript';
-    editor.getModel().setValue('');
-    monaco.editor.setModelLanguage(editor.getModel(), 'javascript');
-    elements.fileLanguage.textContent = 'JavaScript';
+    createTab();
 }
 
-function openFile() {
-    // This will be handled by the main process via IPC
-    console.log('Open file requested');
+async function openFile() {
+    try {
+        const result = await window.file.openFile();
+        
+        if (result.success && !result.canceled) {
+            const language = getLanguageFromFile(result.path);
+            createTab(result.path, result.content, language);
+        }
+    } catch (error) {
+        console.error('Error opening file:', error);
+        showError('Failed to open file: ' + error.message);
+    }
 }
 
 function saveFile() {
@@ -610,12 +1150,122 @@ function hideApiKeyNotice() {
     elements.apiKeyNotice.style.display = 'none';
 }
 
+// AI Provider Modal functions
+function showAiProviderModal() {
+    if (elements.aiProviderModal) {
+        elements.aiProviderModal.classList.add('show');
+    }
+}
+
+function hideAiProviderModal() {
+    if (elements.aiProviderModal) {
+        elements.aiProviderModal.classList.remove('show');
+    }
+}
+
+function switchAiProviderTab(tabName) {
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Add active class to selected tab and content
+    const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+    const activeContent = document.getElementById(`${tabName}-tab`);
+    
+    if (activeTab) activeTab.classList.add('active');
+    if (activeContent) activeContent.classList.add('active');
+}
+
+async function saveAiConfig() {
+    try {
+        const activeTab = document.querySelector('.tab-btn.active');
+        const providerType = activeTab ? activeTab.dataset.tab : 'openai';
+        
+        let config = {};
+        
+        switch (providerType) {
+            case 'openai':
+                const openaiApiKey = document.getElementById('openai-api-key').value;
+                const openaiModel = document.getElementById('openai-model').value;
+                config = { apiKey: openaiApiKey, model: openaiModel };
+                break;
+            case 'ollama':
+                const ollamaUrl = document.getElementById('ollama-url').value;
+                const ollamaModel = document.getElementById('ollama-model').value;
+                config = { baseUrl: ollamaUrl, model: ollamaModel };
+                break;
+            case 'huggingface':
+                const hfApiKey = document.getElementById('hf-api-key').value;
+                const hfModel = document.getElementById('hf-model').value;
+                config = { apiKey: hfApiKey, model: hfModel };
+                break;
+        }
+        
+        showLoading(true);
+        const result = await window.ai.initializeProvider(providerType, config);
+        
+        if (result.success) {
+            apiKeySet = true;
+            updateAiStatus();
+            hideApiKeyNotice();
+            hideAiProviderModal();
+            showSuccess('AI provider configured successfully');
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        showError('Failed to configure AI provider: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function testAiConnection() {
+    try {
+        const activeTab = document.querySelector('.tab-btn.active');
+        const providerType = activeTab ? activeTab.dataset.tab : 'openai';
+        
+        let config = {};
+        
+        switch (providerType) {
+            case 'openai':
+                const openaiApiKey = document.getElementById('openai-api-key').value;
+                const openaiModel = document.getElementById('openai-model').value;
+                config = { apiKey: openaiApiKey, model: openaiModel };
+                break;
+            case 'ollama':
+                const ollamaUrl = document.getElementById('ollama-url').value;
+                const ollamaModel = document.getElementById('ollama-model').value;
+                config = { baseUrl: ollamaUrl, model: ollamaModel };
+                break;
+            case 'huggingface':
+                const hfApiKey = document.getElementById('hf-api-key').value;
+                const hfModel = document.getElementById('hf-model').value;
+                config = { apiKey: hfApiKey, model: hfModel };
+                break;
+        }
+        
+        showLoading(true);
+        const result = await window.ai.testConnection(providerType, config);
+        
+        if (result.success) {
+            showSuccess('Connection test successful!');
+        } else {
+            showError('Connection test failed: ' + result.message);
+        }
+    } catch (error) {
+        showError('Connection test failed: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
 // Utility functions
 function getFileName(path) {
     return path ? path.split(/[\\/]/).pop() : 'Untitled';
 }
 
-function setLanguageFromFile(path) {
+function getLanguageFromFile(path) {
     const ext = path.split('.').pop().toLowerCase();
     const languageMap = {
         'js': 'javascript',
@@ -640,15 +1290,11 @@ function setLanguageFromFile(path) {
         'rb': 'ruby'
     };
     
-    const language = languageMap[ext] || 'plaintext';
-    currentLanguage = language;
-    editor.getModel().setValue(editor.getValue());
-    monaco.editor.setModelLanguage(editor.getModel(), language);
-    elements.fileLanguage.textContent = language.charAt(0).toUpperCase() + language.slice(1);
+    return languageMap[ext] || 'plaintext';
 }
 
 function loadDefaultContent() {
-    const defaultContent = `// Welcome to Cursor Clone!
+    return `// Welcome to Cursor Clone!
 // This is an AI-powered code editor similar to Cursor
 
 // Try these features:
@@ -671,8 +1317,6 @@ console.log(fibonacci(10));
 // - Toggling the chat panel (Ctrl+L)
 // - Setting your API key (Ctrl+K)
 `;
-
-    editor.setValue(defaultContent);
 }
 
 // UI utility functions
@@ -694,6 +1338,945 @@ function showSuccess(message) {
     // Simple success display - in a real app you'd want a proper notification system
     console.log(message);
     alert(message);
+}
+
+// Search and Replace functions
+function toggleSearchBar() {
+    if (elements.searchBar.classList.contains('hidden')) {
+        showSearchBar();
+    } else {
+        hideSearchBar();
+    }
+}
+
+function showSearchBar() {
+    elements.searchBar.classList.remove('hidden');
+    elements.searchInput.focus();
+    elements.searchInput.select();
+}
+
+function hideSearchBar() {
+    elements.searchBar.classList.add('hidden');
+    elements.replaceContainer.classList.add('hidden');
+    if (editor) {
+        editor.getAction('editor.action.clearSearchResults').run();
+    }
+}
+
+function handleSearchKeydown(e) {
+    if (e.key === 'Enter') {
+        if (e.shiftKey) {
+            findPrevious();
+        } else {
+            findNext();
+        }
+    } else if (e.key === 'Escape') {
+        hideSearchBar();
+    }
+}
+
+function performSearch() {
+    const searchTerm = elements.searchInput.value;
+    if (!searchTerm || !editor) return;
+    
+    const options = {
+        matchCase: document.getElementById('case-sensitive').checked,
+        wholeWord: document.getElementById('whole-word').checked,
+        regex: document.getElementById('regex').checked
+    };
+    
+    editor.getModel().findMatches(searchTerm, false, options.regex, options.matchCase, null, true);
+}
+
+function findNext() {
+    if (!editor) return;
+    editor.getAction('editor.action.nextMatchFindAction').run();
+}
+
+function findPrevious() {
+    if (!editor) return;
+    editor.getAction('editor.action.previousMatchFindAction').run();
+}
+
+function toggleReplace() {
+    if (elements.replaceContainer.classList.contains('hidden')) {
+        elements.replaceContainer.classList.remove('hidden');
+        elements.replaceInput.focus();
+    } else {
+        elements.replaceContainer.classList.add('hidden');
+    }
+}
+
+function replaceAll() {
+    if (!editor) return;
+    
+    const searchTerm = elements.searchInput.value;
+    const replaceTerm = elements.replaceInput.value;
+    
+    if (!searchTerm) return;
+    
+    const options = {
+        matchCase: document.getElementById('case-sensitive').checked,
+        wholeWord: document.getElementById('whole-word').checked,
+        regex: document.getElementById('regex').checked
+    };
+    
+    const model = editor.getModel();
+    const matches = model.findMatches(searchTerm, false, options.regex, options.matchCase, null, true);
+    
+    if (matches.length === 0) {
+        showError('No matches found');
+        return;
+    }
+    
+    // Replace in reverse order to maintain positions
+    matches.reverse().forEach(match => {
+        model.pushEditOperations([], [{
+            range: match.range,
+            text: replaceTerm
+        }]);
+    });
+    
+    showSuccess(`Replaced ${matches.length} occurrence(s)`);
+}
+
+// Terminal functionality
+let terminalHistory = [];
+let terminalHistoryIndex = -1;
+let lastCommand = '';
+
+function toggleTerminalPanel() {
+    if (elements.terminalPanel.classList.contains('visible')) {
+        hideTerminalPanel();
+    } else {
+        showTerminalPanel();
+    }
+}
+
+function showTerminalPanel() {
+    elements.terminalPanel.classList.add('visible');
+    elements.terminalInput.focus();
+}
+
+function hideTerminalPanel() {
+    elements.terminalPanel.classList.remove('visible');
+}
+
+function handleTerminalKeydown(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        sendTerminalMessage();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (terminalHistoryIndex > 0) {
+            terminalHistoryIndex--;
+            elements.terminalInput.value = terminalHistory[terminalHistoryIndex];
+        }
+    } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (terminalHistoryIndex < terminalHistory.length - 1) {
+            terminalHistoryIndex++;
+            elements.terminalInput.value = terminalHistory[terminalHistoryIndex];
+        } else if (terminalHistoryIndex === terminalHistory.length - 1) {
+            terminalHistoryIndex = terminalHistory.length;
+            elements.terminalInput.value = '';
+        }
+    }
+}
+
+function updateTerminalSendButton() {
+    const hasText = elements.terminalInput.value.trim().length > 0;
+    elements.sendTerminalBtn.disabled = !hasText;
+}
+
+async function sendTerminalMessage() {
+    const message = elements.terminalInput.value.trim();
+    if (!message) return;
+
+    // Add to history
+    terminalHistory.push(message);
+    terminalHistoryIndex = terminalHistory.length;
+    lastCommand = message;
+
+    // Display user input
+    addTerminalLine(`$ ${message}`, 'user');
+
+    // Clear input
+    elements.terminalInput.value = '';
+    updateTerminalSendButton();
+
+    try {
+        // Get AI command suggestion
+        const command = await window.terminal.generateCommandFromDescription(message);
+        
+        if (command && command !== message) {
+            addTerminalLine(`AI suggests: ${command}`, 'ai');
+            addTerminalLine('', '');
+        }
+
+        // Execute the command
+        const result = await window.terminal.executeCommand(command || message);
+        
+        if (result.success) {
+            if (result.output) {
+                addTerminalLine(result.output, 'success');
+            }
+        } else {
+            addTerminalLine(`Error: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        addTerminalLine(`Error: ${error.message}`, 'error');
+    }
+
+    // Scroll to bottom
+    elements.terminalOutput.scrollTop = elements.terminalOutput.scrollHeight;
+}
+
+function addTerminalLine(text, type = '') {
+    const line = document.createElement('div');
+    line.className = `terminal-line ${type}`;
+    line.textContent = text;
+    elements.terminalOutput.appendChild(line);
+}
+
+function clearTerminal() {
+    elements.terminalOutput.innerHTML = `
+        <div class="terminal-welcome">
+            <i class="fas fa-robot"></i>
+            <h4>AI-Powered Terminal</h4>
+            <p>Describe what you want to do in natural language, and I'll help you with the right commands!</p>
+            <div class="terminal-examples">
+                <h5>Examples:</h5>
+                <ul>
+                    <li>"List all files in this directory"</li>
+                    <li>"Install the latest version of Node.js"</li>
+                    <li>"Find all JavaScript files"</li>
+                    <li>"Start the development server"</li>
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+async function getAiCommandSuggestions() {
+    const message = elements.terminalInput.value.trim();
+    if (!message) {
+        showError('Please enter a description first');
+        return;
+    }
+
+    try {
+        const command = await window.terminal.generateCommandFromDescription(message);
+        if (command) {
+            elements.terminalInput.value = command;
+            updateTerminalSendButton();
+        }
+    } catch (error) {
+        showError(`Failed to get AI suggestion: ${error.message}`);
+    }
+}
+
+async function executeLastCommand() {
+    if (!lastCommand) {
+        showError('No previous command to execute');
+        return;
+    }
+
+    elements.terminalInput.value = lastCommand;
+    updateTerminalSendButton();
+    await sendTerminalMessage();
+}
+
+// Debug functionality
+let debugIssues = [];
+let debugSuggestions = [];
+let debugLogs = [];
+
+function toggleDebugPanel() {
+    if (elements.debugPanel.classList.contains('visible')) {
+        hideDebugPanel();
+    } else {
+        showDebugPanel();
+    }
+}
+
+function showDebugPanel() {
+    elements.debugPanel.classList.add('visible');
+}
+
+function hideDebugPanel() {
+    elements.debugPanel.classList.remove('visible');
+}
+
+function switchDebugTab(tabName) {
+    // Remove active class from all tabs and panels
+    document.querySelectorAll('.debug-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.debug-tab-panel').forEach(panel => panel.classList.remove('active'));
+    
+    // Add active class to selected tab and panel
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`debug-${tabName}`).classList.add('active');
+}
+
+async function analyzeCurrentFile() {
+    if (!editor) {
+        showError('No file open to analyze');
+        return;
+    }
+
+    const content = editor.getValue();
+    const language = editor.getModel().getLanguageId();
+    
+    if (!content.trim()) {
+        showError('File is empty');
+        return;
+    }
+
+    try {
+        showLoading(true);
+        const result = await window.debug.analyzeCode(content, language);
+        
+        if (result.success) {
+            debugIssues = result.issues || [];
+            debugSuggestions = result.issues.filter(issue => issue.type === 'suggestion') || [];
+            
+            displayAnalysisResults(result);
+            displayIssues();
+            displaySuggestions();
+            addDebugLog('Analysis completed', 'info', `Analyzed ${language} file with ${debugIssues.length} issues found`);
+        } else {
+            showError(`Analysis failed: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Analysis error: ${error.message}`);
+        addDebugLog(`Analysis error: ${error.message}`, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function analyzeSelectedCode() {
+    if (!editor) {
+        showError('No editor available');
+        return;
+    }
+
+    const selection = editor.getSelection();
+    if (selection.isEmpty()) {
+        showError('Please select some code to analyze');
+        return;
+    }
+
+    const content = editor.getModel().getValueInRange(selection);
+    const language = editor.getModel().getLanguageId();
+    
+    try {
+        showLoading(true);
+        const result = await window.debug.analyzeCode(content, language);
+        
+        if (result.success) {
+            debugIssues = result.issues || [];
+            debugSuggestions = result.issues.filter(issue => issue.type === 'suggestion') || [];
+            
+            displayAnalysisResults(result);
+            displayIssues();
+            displaySuggestions();
+            addDebugLog('Selected code analysis completed', 'info', `Analyzed ${language} selection with ${debugIssues.length} issues found`);
+        } else {
+            showError(`Analysis failed: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Analysis error: ${error.message}`);
+        addDebugLog(`Analysis error: ${error.message}`, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function displayAnalysisResults(result) {
+    elements.analysisResults.classList.remove('hidden');
+    
+    const summary = result.summary || {
+        totalIssues: debugIssues.length,
+        errors: debugIssues.filter(i => i.severity === 'error').length,
+        warnings: debugIssues.filter(i => i.severity === 'warning').length,
+        suggestions: debugSuggestions.length
+    };
+    
+    elements.summaryContent.innerHTML = `
+        <div class="summary-stats">
+            <div class="stat-item">
+                <span class="stat-number">${summary.totalIssues}</span>
+                <span class="stat-label">Total Issues</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number error">${summary.errors}</span>
+                <span class="stat-label">Errors</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number warning">${summary.warnings}</span>
+                <span class="stat-label">Warnings</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number info">${summary.suggestions}</span>
+                <span class="stat-label">Suggestions</span>
+            </div>
+        </div>
+    `;
+}
+
+function displayIssues() {
+    if (debugIssues.length === 0) {
+        elements.issuesList.innerHTML = `
+            <div class="no-issues">
+                <i class="fas fa-check-circle"></i>
+                <p>No issues detected. Your code looks good!</p>
+            </div>
+        `;
+        return;
+    }
+
+    const issuesHtml = debugIssues.map(issue => `
+        <div class="issue-item">
+            <div class="issue-header">
+                <span class="issue-title">${issue.title || 'Issue'}</span>
+                <span class="issue-severity ${issue.severity || 'info'}">${issue.severity || 'info'}</span>
+            </div>
+            <div class="issue-description">${issue.description || issue.message || 'No description available'}</div>
+            ${issue.location ? `<div class="issue-location">${issue.location}</div>` : ''}
+        </div>
+    `).join('');
+
+    elements.issuesList.innerHTML = issuesHtml;
+}
+
+function displaySuggestions() {
+    if (debugSuggestions.length === 0) {
+        elements.suggestionsList.innerHTML = `
+            <div class="no-suggestions">
+                <i class="fas fa-lightbulb"></i>
+                <p>No AI suggestions available. Try analyzing your code first.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const suggestionsHtml = debugSuggestions.map(suggestion => `
+        <div class="suggestion-item">
+            <div class="suggestion-header">
+                <span class="suggestion-title">${suggestion.title || 'Suggestion'}</span>
+            </div>
+            <div class="suggestion-description">${suggestion.description || suggestion.message || 'No description available'}</div>
+            ${suggestion.location ? `<div class="suggestion-location">${suggestion.location}</div>` : ''}
+        </div>
+    `).join('');
+
+    elements.suggestionsList.innerHTML = suggestionsHtml;
+}
+
+function clearIssues() {
+    debugIssues = [];
+    debugSuggestions = [];
+    displayIssues();
+    displaySuggestions();
+    elements.analysisResults.classList.add('hidden');
+    addDebugLog('Issues cleared', 'info');
+}
+
+function refreshSuggestions() {
+    if (debugIssues.length === 0) {
+        showError('No analysis data available. Please analyze your code first.');
+        return;
+    }
+    
+    // Re-analyze to get fresh suggestions
+    analyzeCurrentFile();
+}
+
+function addDebugLog(message, type = 'info', details = '') {
+    const timestamp = new Date().toLocaleTimeString();
+    const log = {
+        message,
+        type,
+        details,
+        timestamp
+    };
+    
+    debugLogs.unshift(log); // Add to beginning
+    
+    // Keep only last 100 logs
+    if (debugLogs.length > 100) {
+        debugLogs = debugLogs.slice(0, 100);
+    }
+    
+    displayDebugLogs();
+}
+
+function displayDebugLogs() {
+    if (debugLogs.length === 0) {
+        elements.debugLogsList.innerHTML = `
+            <div class="no-logs">
+                <i class="fas fa-clipboard-list"></i>
+                <p>No debug logs yet. Start debugging to see logs here.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const logsHtml = debugLogs.map(log => `
+        <div class="log-item">
+            <div class="log-header">
+                <span class="log-title">${log.message}</span>
+                <span class="log-timestamp">${log.timestamp}</span>
+            </div>
+            ${log.details ? `<div class="log-message">${log.details}</div>` : ''}
+        </div>
+    `).join('');
+
+    elements.debugLogsList.innerHTML = logsHtml;
+}
+
+function clearDebugLogs() {
+    debugLogs = [];
+    displayDebugLogs();
+}
+
+function exportDebugLogs() {
+    if (debugLogs.length === 0) {
+        showError('No logs to export');
+        return;
+    }
+
+    const logData = {
+        timestamp: new Date().toISOString(),
+        logs: debugLogs,
+        issues: debugIssues,
+        suggestions: debugSuggestions
+    };
+
+    const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `debug-logs-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showSuccess('Debug logs exported successfully');
+}
+
+// Snippets functionality
+let allSnippets = [];
+let filteredSnippets = [];
+let currentGeneratedSnippet = null;
+
+function toggleSnippetsPanel() {
+    if (elements.snippetsPanel.classList.contains('visible')) {
+        hideSnippetsPanel();
+    } else {
+        showSnippetsPanel();
+    }
+}
+
+function showSnippetsPanel() {
+    elements.snippetsPanel.classList.add('visible');
+    loadSnippets();
+}
+
+function hideSnippetsPanel() {
+    elements.snippetsPanel.classList.remove('visible');
+}
+
+function switchSnippetsTab(tabName) {
+    // Remove active class from all tabs and panels
+    document.querySelectorAll('.snippets-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.snippets-tab-panel').forEach(panel => panel.classList.remove('active'));
+    
+    // Add active class to selected tab and panel
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`snippets-${tabName}`).classList.add('active');
+}
+
+async function loadSnippets() {
+    try {
+        elements.snippetsList.innerHTML = `
+            <div class="snippets-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading snippets...</p>
+            </div>
+        `;
+
+        const result = await window.snippets.getAll();
+        if (result.success) {
+            allSnippets = result.snippets || [];
+            filteredSnippets = [...allSnippets];
+            displaySnippets();
+            updateCategoryFilter();
+        } else {
+            showError(`Failed to load snippets: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Error loading snippets: ${error.message}`);
+    }
+}
+
+function displaySnippets() {
+    if (filteredSnippets.length === 0) {
+        elements.snippetsList.innerHTML = `
+            <div class="snippets-loading">
+                <i class="fas fa-code"></i>
+                <p>No snippets found. Create your first snippet!</p>
+            </div>
+        `;
+        return;
+    }
+
+    const snippetsHtml = filteredSnippets.map(snippet => `
+        <div class="snippet-item" data-snippet-id="${snippet.id}">
+            <div class="snippet-header">
+                <span class="snippet-name">${snippet.name}</span>
+                <span class="snippet-language">${snippet.language}</span>
+            </div>
+            <div class="snippet-description">${snippet.description || 'No description'}</div>
+            <div class="snippet-meta">
+                <span class="snippet-category">${snippet.category || 'Uncategorized'}</span>
+                <div class="snippet-actions">
+                    <button class="snippet-action-btn" onclick="useSnippet('${snippet.id}')" title="Use snippet">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="snippet-action-btn" onclick="editSnippet('${snippet.id}')" title="Edit snippet">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="snippet-action-btn" onclick="deleteSnippet('${snippet.id}')" title="Delete snippet">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    elements.snippetsList.innerHTML = snippetsHtml;
+}
+
+function updateCategoryFilter() {
+    const categories = [...new Set(allSnippets.map(s => s.category).filter(Boolean))];
+    const categoryFilter = elements.snippetsCategoryFilter;
+    
+    // Clear existing options except "All Categories"
+    categoryFilter.innerHTML = '<option value="">All Categories</option>';
+    
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categoryFilter.appendChild(option);
+    });
+}
+
+function filterSnippets() {
+    const searchTerm = elements.snippetsSearchInput.value.toLowerCase();
+    const languageFilter = elements.snippetsLanguageFilter.value;
+    const categoryFilter = elements.snippetsCategoryFilter.value;
+
+    filteredSnippets = allSnippets.filter(snippet => {
+        const matchesSearch = !searchTerm || 
+            snippet.name.toLowerCase().includes(searchTerm) ||
+            snippet.description.toLowerCase().includes(searchTerm) ||
+            snippet.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+        
+        const matchesLanguage = !languageFilter || snippet.language === languageFilter;
+        const matchesCategory = !categoryFilter || snippet.category === categoryFilter;
+
+        return matchesSearch && matchesLanguage && matchesCategory;
+    });
+
+    displaySnippets();
+}
+
+async function saveSnippet() {
+    const snippetData = {
+        name: elements.snippetName.value.trim(),
+        description: elements.snippetDescription.value.trim(),
+        language: elements.snippetLanguage.value,
+        category: elements.snippetCategory.value.trim(),
+        code: elements.snippetCode.value.trim(),
+        tags: elements.snippetTags.value.split(',').map(tag => tag.trim()).filter(Boolean)
+    };
+
+    if (!snippetData.name || !snippetData.code) {
+        showError('Name and code are required');
+        return;
+    }
+
+    try {
+        showLoading(true);
+        const result = await window.snippets.create(snippetData);
+        
+        if (result.success) {
+            showSuccess('Snippet saved successfully');
+            clearSnippetForm();
+            loadSnippets();
+        } else {
+            showError(`Failed to save snippet: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Error saving snippet: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function clearSnippetForm() {
+    elements.snippetName.value = '';
+    elements.snippetDescription.value = '';
+    elements.snippetLanguage.value = 'javascript';
+    elements.snippetCategory.value = '';
+    elements.snippetCode.value = '';
+    elements.snippetTags.value = '';
+}
+
+async function generateAISnippet() {
+    const description = elements.aiSnippetDescription.value.trim();
+    const language = elements.aiSnippetLanguage.value;
+    const category = elements.aiSnippetCategory.value.trim() || 'AI Generated';
+
+    if (!description) {
+        showError('Please enter a description for the snippet');
+        return;
+    }
+
+    try {
+        showLoading(true);
+        const result = await window.snippets.generateSnippetFromAI(description, language, category);
+        
+        if (result.success) {
+            currentGeneratedSnippet = result.snippet;
+            displayGeneratedSnippet(result.snippet);
+            showSuccess('Snippet generated successfully');
+        } else {
+            showError(`Failed to generate snippet: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Error generating snippet: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function displayGeneratedSnippet(snippet) {
+    elements.aiGeneratedSnippet.classList.remove('hidden');
+    document.querySelector('.snippet-name-preview').textContent = snippet.name;
+    document.querySelector('.snippet-code-preview').textContent = snippet.code;
+}
+
+async function useGeneratedSnippet() {
+    if (!currentGeneratedSnippet) {
+        showError('No generated snippet to use');
+        return;
+    }
+
+    try {
+        const result = await window.snippets.create(currentGeneratedSnippet);
+        
+        if (result.success) {
+            showSuccess('Generated snippet saved to library');
+            elements.aiGeneratedSnippet.classList.add('hidden');
+            elements.aiSnippetDescription.value = '';
+            elements.aiSnippetCategory.value = '';
+            currentGeneratedSnippet = null;
+            loadSnippets();
+        } else {
+            showError(`Failed to save generated snippet: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Error saving generated snippet: ${error.message}`);
+    }
+}
+
+async function useSnippet(snippetId) {
+    const snippet = allSnippets.find(s => s.id === snippetId);
+    if (!snippet) return;
+
+    if (editor) {
+        const selection = editor.getSelection();
+        if (!selection.isEmpty()) {
+            // Replace selected text
+            editor.executeEdits('snippet-insert', [{
+                range: selection,
+                text: snippet.code
+            }]);
+        } else {
+            // Insert at cursor position
+            const position = editor.getPosition();
+            editor.executeEdits('snippet-insert', [{
+                range: { startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: position.lineNumber, endColumn: position.column },
+                text: snippet.code
+            }]);
+        }
+        showSuccess(`Snippet "${snippet.name}" inserted`);
+    } else {
+        showError('No editor available');
+    }
+}
+
+function editSnippet(snippetId) {
+    const snippet = allSnippets.find(s => s.id === snippetId);
+    if (!snippet) return;
+
+    // Switch to create tab and populate form
+    switchSnippetsTab('create');
+    elements.snippetName.value = snippet.name;
+    elements.snippetDescription.value = snippet.description || '';
+    elements.snippetLanguage.value = snippet.language;
+    elements.snippetCategory.value = snippet.category || '';
+    elements.snippetCode.value = snippet.code;
+    elements.snippetTags.value = snippet.tags.join(', ');
+}
+
+async function deleteSnippet(snippetId) {
+    if (!confirm('Are you sure you want to delete this snippet?')) return;
+
+    try {
+        const result = await window.snippets.delete(snippetId);
+        
+        if (result.success) {
+            showSuccess('Snippet deleted successfully');
+            loadSnippets();
+        } else {
+            showError(`Failed to delete snippet: ${result.error}`);
+        }
+    } catch (error) {
+        showError(`Error deleting snippet: ${error.message}`);
+    }
+}
+
+// Analytics functionality
+function toggleAnalyticsPanel() {
+    if (elements.analyticsPanel.classList.contains('visible')) {
+        hideAnalyticsPanel();
+    } else {
+        showAnalyticsPanel();
+    }
+}
+
+function showAnalyticsPanel() {
+    elements.analyticsPanel.classList.add('visible');
+    loadAnalytics();
+}
+
+function hideAnalyticsPanel() {
+    elements.analyticsPanel.classList.remove('visible');
+}
+
+function switchAnalyticsTab(tabName) {
+    // Remove active class from all tabs and panels
+    document.querySelectorAll('.analytics-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.analytics-tab-panel').forEach(panel => panel.classList.remove('active'));
+    
+    // Add active class to selected tab and panel
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`analytics-${tabName}`).classList.add('active');
+}
+
+async function loadAnalytics() {
+    try {
+        // Load analytics data from database
+        const result = await window.database.getAnalytics();
+        if (result.success) {
+            updateAnalyticsDisplay(result.analytics);
+        } else {
+            // Use mock data for demonstration
+            updateAnalyticsDisplay(getMockAnalytics());
+        }
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        updateAnalyticsDisplay(getMockAnalytics());
+    }
+}
+
+function getMockAnalytics() {
+    return {
+        totalAIRequests: 156,
+        avgResponseTime: 1200,
+        linesGenerated: 2847,
+        issuesFound: 23,
+        providerUsage: {
+            'OpenAI': 45,
+            'Ollama': 32,
+            'HuggingFace': 23
+        },
+        featureUsage: {
+            'Code Completion': 89,
+            'Chat Assistant': 45,
+            'Code Refactoring': 12,
+            'Debug Analysis': 10
+        },
+        performance: {
+            memoryUsage: 245,
+            cpuUsage: 15,
+            sessionDuration: 45
+        }
+    };
+}
+
+function updateAnalyticsDisplay(analytics) {
+    // Update overview stats
+    document.getElementById('total-ai-requests').textContent = analytics.totalAIRequests || 0;
+    document.getElementById('avg-response-time').textContent = `${analytics.avgResponseTime || 0}ms`;
+    document.getElementById('lines-generated').textContent = analytics.linesGenerated || 0;
+    document.getElementById('issues-found').textContent = analytics.issuesFound || 0;
+
+    // Update performance metrics
+    document.getElementById('memory-usage').textContent = `${analytics.performance?.memoryUsage || 0} MB`;
+    document.getElementById('cpu-usage').textContent = `${analytics.performance?.cpuUsage || 0}%`;
+    document.getElementById('session-duration').textContent = `${analytics.performance?.sessionDuration || 0}m`;
+
+    // Update feature usage
+    if (analytics.featureUsage) {
+        Object.entries(analytics.featureUsage).forEach(([feature, count]) => {
+            const featureItem = document.querySelector(`[data-feature="${feature}"]`);
+            if (featureItem) {
+                featureItem.querySelector('.feature-count').textContent = count;
+            }
+        });
+    }
+}
+
+async function refreshAnalytics() {
+    showLoading(true);
+    try {
+        await loadAnalytics();
+        showSuccess('Analytics data refreshed');
+    } catch (error) {
+        showError('Failed to refresh analytics data');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function exportAnalytics() {
+    try {
+        const analyticsData = {
+            timestamp: new Date().toISOString(),
+            data: getMockAnalytics()
+        };
+
+        const blob = new Blob([JSON.stringify(analyticsData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-report-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showSuccess('Analytics report exported successfully');
+    } catch (error) {
+        showError('Failed to export analytics report');
+    }
 }
 
 // Initialize the application when the DOM is loaded

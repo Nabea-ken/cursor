@@ -90,6 +90,20 @@ function createMenu() {
           }
         },
         {
+          label: 'Open Folder',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow, {
+              properties: ['openDirectory']
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+              const folderPath = result.filePaths[0];
+              mainWindow.webContents.send('folder-opened', { path: folderPath });
+            }
+          }
+        },
+        {
           label: 'Save',
           accelerator: 'CmdOrCtrl+S',
           click: () => {
@@ -214,12 +228,14 @@ function initializeServices() {
     const { GitService } = require('./services/git-service');
     const { TerminalService } = require('./services/terminal-service');
     const { SnippetsService } = require('./services/snippets-service');
+    const { DebugService } = require('./services/debug-service');
     const { DatabaseService } = require('./services/database-service');
     const { CollaborationService } = require('./services/collaboration-service');
     
     gitService = new GitService();
     terminalService = new TerminalService();
     snippetsService = new SnippetsService();
+    debugService = new DebugService();
     databaseService = new DatabaseService();
     collaborationService = new CollaborationService();
     
@@ -501,6 +517,20 @@ ipcMain.handle('terminal-get-suggestions', async (event, { partialCommand, conte
   }
 });
 
+ipcMain.handle('terminal-generate-command', async (event, { description }) => {
+  try {
+    if (!terminalService) {
+      throw new Error('Terminal service not initialized');
+    }
+    
+    const command = await terminalService.generateCommandFromDescription(description);
+    return { success: true, command };
+  } catch (error) {
+    console.error('Terminal generate command error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Snippets service handlers
 ipcMain.handle('snippets-create', async (event, { snippetData }) => {
   try {
@@ -540,6 +570,34 @@ ipcMain.handle('snippets-search', async (event, { query }) => {
     return { success: true, snippets };
   } catch (error) {
     console.error('Snippets search error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('snippets-generate-ai', async (event, { description, language, category }) => {
+  try {
+    if (!snippetsService) {
+      throw new Error('Snippets service not initialized');
+    }
+    
+    const result = await snippetsService.generateSnippetFromAI(description, language, category);
+    return { success: true, snippet: result };
+  } catch (error) {
+    console.error('Snippets AI generate error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('snippets-delete', async (event, { snippetId }) => {
+  try {
+    if (!snippetsService) {
+      throw new Error('Snippets service not initialized');
+    }
+    
+    const result = await snippetsService.deleteSnippet(snippetId);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Snippets delete error:', error);
     return { success: false, error: error.message };
   }
 });
@@ -657,6 +715,187 @@ ipcMain.handle('collab-get-rooms', async () => {
     return { success: false, error: error.message };
   }
 });
+
+// Debug service handlers
+ipcMain.handle('debug-analyze-code', async (event, { code, language }) => {
+  try {
+    if (!debugService) {
+      throw new Error('Debug service not initialized');
+    }
+    
+    const result = await debugService.analyzeCode(code, language);
+    return result;
+  } catch (error) {
+    console.error('Debug analyze code error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('debug-get-tips', async (event, { language }) => {
+  try {
+    if (!debugService) {
+      throw new Error('Debug service not initialized');
+    }
+    
+    const tips = debugService.getDebuggingTips(language);
+    return { success: true, tips };
+  } catch (error) {
+    console.error('Debug get tips error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('debug-generate-report', async (event, { sessionId }) => {
+  try {
+    if (!debugService) {
+      throw new Error('Debug service not initialized');
+    }
+    
+    const result = debugService.generateReport(sessionId);
+    return result;
+  } catch (error) {
+    console.error('Debug generate report error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// File operation handlers
+ipcMain.handle('open-file', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'All Files', extensions: ['*'] },
+        { name: 'JavaScript', extensions: ['js', 'jsx'] },
+        { name: 'TypeScript', extensions: ['ts', 'tsx'] },
+        { name: 'Python', extensions: ['py'] },
+        { name: 'HTML', extensions: ['html', 'htm'] },
+        { name: 'CSS', extensions: ['css'] },
+        { name: 'JSON', extensions: ['json'] },
+        { name: 'Markdown', extensions: ['md'] }
+      ]
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      const content = fs.readFileSync(filePath, 'utf8');
+      
+      // Send the file content back to the renderer
+      return { success: true, path: filePath, content: content };
+    }
+    
+    return { success: false, canceled: true };
+  } catch (error) {
+    console.error('Open file error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-file', async (event, { content, path }) => {
+  try {
+    if (!path) {
+      const result = await dialog.showSaveDialog({
+        filters: [
+          { name: 'All Files', extensions: ['*'] },
+          { name: 'JavaScript', extensions: ['js'] },
+          { name: 'TypeScript', extensions: ['ts'] },
+          { name: 'Python', extensions: ['py'] },
+          { name: 'HTML', extensions: ['html'] },
+          { name: 'CSS', extensions: ['css'] },
+          { name: 'JSON', extensions: ['json'] }
+        ]
+      });
+
+      if (result.canceled) {
+        return { success: false, canceled: true };
+      }
+      
+      path = result.filePath;
+    }
+
+    fs.writeFileSync(path, content, 'utf8');
+    return { success: true, path: path };
+  } catch (error) {
+    console.error('Save file error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// File tree operations
+ipcMain.handle('get-file-tree', async (event, { folderPath }) => {
+  try {
+    const tree = await buildFileTree(folderPath);
+    return { success: true, tree };
+  } catch (error) {
+    console.error('Get file tree error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('open-file-from-path', async (event, { filePath }) => {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    return { success: true, content };
+  } catch (error) {
+    console.error('Open file from path error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Helper function to build file tree
+async function buildFileTree(folderPath, maxDepth = 3, currentDepth = 0) {
+  if (currentDepth >= maxDepth) {
+    return [];
+  }
+
+  try {
+    const items = await fs.promises.readdir(folderPath, { withFileTypes: true });
+    const tree = [];
+
+    for (const item of items) {
+      // Skip hidden files and common ignore patterns
+      if (item.name.startsWith('.') || 
+          item.name === 'node_modules' || 
+          item.name === '.git' ||
+          item.name === 'dist' ||
+          item.name === 'build') {
+        continue;
+      }
+
+      const fullPath = path.join(folderPath, item.name);
+      
+      if (item.isDirectory()) {
+        const children = await buildFileTree(fullPath, maxDepth, currentDepth + 1);
+        tree.push({
+          name: item.name,
+          path: fullPath,
+          type: 'folder',
+          children: children,
+          expanded: false
+        });
+      } else {
+        tree.push({
+          name: item.name,
+          path: fullPath,
+          type: 'file'
+        });
+      }
+    }
+
+    // Sort: folders first, then files, both alphabetically
+    tree.sort((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === 'folder' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    return tree;
+  } catch (error) {
+    console.error('Error building file tree:', error);
+    return [];
+  }
+}
 
 // App event handlers
 app.whenReady().then(() => {

@@ -373,15 +373,15 @@ class SnippetsService {
         description: 'Basic React functional component',
         code: `import React from 'react';
 
-const ${1:ComponentName} = () => {
+const ComponentName = () => {
   return (
     <div>
-      ${2:Content}
+      Content
     </div>
   );
 };
 
-export default ${1:ComponentName};`,
+export default ComponentName;`,
         language: 'javascript',
         category: 'React',
         tags: ['react', 'component', 'jsx']
@@ -389,10 +389,10 @@ export default ${1:ComponentName};`,
       {
         name: 'Async Function',
         description: 'JavaScript async function with error handling',
-        code: `const ${1:functionName} = async (${2:params}) => {
+        code: `const functionName = async (params) => {
   try {
-    ${3:// Your async code here}
-    return ${4:result};
+    // Your async code here
+    return result;
   } catch (error) {
     console.error('Error:', error);
     throw error;
@@ -405,12 +405,12 @@ export default ${1:ComponentName};`,
       {
         name: 'Python Class',
         description: 'Basic Python class with constructor',
-        code: `class ${1:ClassName}:
-    def __init__(self, ${2:params}):
-        ${3:self.param = param}
+        code: `class ClassName:
+    def __init__(self, params):
+        self.param = param
     
-    def ${4:method_name}(self):
-        ${5:pass}`,
+    def method_name(self):
+        pass`,
         language: 'python',
         category: 'Python',
         tags: ['class', 'constructor', 'method']

@@ -17,6 +17,9 @@ A desktop application similar to Cursor, built with Electron and Monaco Editor, 
 - **Code Refactoring**: Right-click to refactor selected code
 - **Code Explanation**: Get detailed explanations of selected code
 - **Context-Aware**: Send selected code or entire files as context to AI
+- **Multiple AI Providers**: Support for OpenAI, HuggingFace, and Ollama
+- **AI Service Manager**: Unified interface for different AI providers
+- **Advanced AI Features**: Code generation, debugging assistance, test generation
 
 ### User Experience
 - **Responsive Design**: Works on different screen sizes
@@ -24,6 +27,15 @@ A desktop application similar to Cursor, built with Electron and Monaco Editor, 
 - **Status Bar**: Shows cursor position, file language, and AI status
 - **Loading States**: Visual feedback during AI operations
 - **Error Handling**: Graceful error handling with user-friendly messages
+
+### Advanced Services
+- **Git Integration**: Full Git operations with commit history and branching
+- **Terminal Service**: Integrated terminal for command execution
+- **Code Snippets**: Manage and organize reusable code snippets
+- **Analytics Service**: Track usage patterns and performance metrics
+- **Collaboration Service**: Real-time collaboration with team members
+- **Database Service**: Persistent storage for preferences and data
+- **Debug Service**: Advanced debugging and error analysis
 
 ## 🛠️ Installation & Setup
 
@@ -69,11 +81,22 @@ cursor-clone/
 ├── preload.js             # Secure IPC bridge
 ├── package.json           # Dependencies and scripts
 ├── services/
-│   └── ai-service.js      # AI service implementation
+│   ├── ai-service.js      # OpenAI AI service implementation
+│   ├── ai-manager.js      # AI service manager
+│   ├── huggingface-service.js # HuggingFace AI service
+│   ├── ollama-service.js  # Ollama local AI service
+│   ├── git-service.js     # Git integration service
+│   ├── terminal-service.js # Terminal service
+│   ├── snippets-service.js # Code snippets service
+│   ├── analytics-service.js # Analytics and insights
+│   ├── collaboration-service.js # Real-time collaboration
+│   ├── database-service.js # Database and persistence
+│   └── debug-service.js   # Debugging assistance
 ├── renderer/
 │   ├── index.html         # Main HTML file
 │   ├── styles.css         # Application styles
 │   └── app.js            # Frontend application logic
+├── docs/                  # Documentation
 └── README.md             # This file
 ```
 
@@ -154,22 +177,25 @@ The AI service is designed to be easily extensible. To add a new provider:
 - [x] Context menu
 - [x] Keyboard shortcuts
 
-### Phase 2 - Enhanced Features
-- [ ] File explorer panel
-- [ ] Multi-file context retrieval
-- [ ] Git integration
-- [ ] Search and replace
-- [ ] Multiple AI model support
-- [ ] Local AI models (Ollama, etc.)
-- [ ] Code snippets
-- [ ] Extensions system
+### Phase 2 - Enhanced Features ✅
+- [x] Multiple AI model support (OpenAI, HuggingFace, Ollama)
+- [x] Git integration service
+- [x] Terminal service
+- [x] Code snippets service
+- [x] Analytics service
+- [x] Collaboration service
+- [x] Database service
+- [x] Debug service
+- [ ] File explorer panel (UI integration needed)
+- [ ] Multi-file context retrieval (UI integration needed)
+- [ ] Search and replace (UI integration needed)
 
 ### Phase 3 - Advanced Features
 - [ ] Backend proxy server
 - [ ] User authentication
-- [ ] Usage analytics
+- [ ] Usage analytics dashboard
 - [ ] Subscription management
-- [ ] Team collaboration
+- [ ] Team collaboration UI
 - [ ] Cloud sync
 - [ ] Advanced AI features (code generation, debugging)
 

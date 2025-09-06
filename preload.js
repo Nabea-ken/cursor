@@ -57,12 +57,28 @@ contextBridge.exposeInMainWorld('ai', {
 
 // Expose file operations
 contextBridge.exposeInMainWorld('file', {
+  // File operations
+  openFile: () => 
+    ipcRenderer.invoke('open-file'),
+  
+  saveFile: (content, path) => 
+    ipcRenderer.invoke('save-file', { content, path }),
+  
+  getFileTree: (folderPath) => 
+    ipcRenderer.invoke('get-file-tree', { folderPath }),
+  
+  openFileFromPath: (filePath) => 
+    ipcRenderer.invoke('open-file-from-path', { filePath }),
+  
   // Listen for file operations from menu
   onNewFile: (callback) => 
     ipcRenderer.on('menu-new-file', callback),
   
   onFileOpened: (callback) => 
     ipcRenderer.on('file-opened', callback),
+  
+  onFolderOpened: (callback) => 
+    ipcRenderer.on('folder-opened', callback),
   
   onSaveFile: (callback) => 
     ipcRenderer.on('menu-save-file', callback),
@@ -105,8 +121,14 @@ contextBridge.exposeInMainWorld('terminal', {
   execute: (command, sessionId) => 
     ipcRenderer.invoke('terminal-execute', { command, sessionId }),
   
+  executeCommand: (command, sessionId) => 
+    ipcRenderer.invoke('terminal-execute', { command, sessionId }),
+  
   executeWithAI: (description, sessionId) => 
     ipcRenderer.invoke('terminal-execute-ai', { description, sessionId }),
+  
+  generateCommandFromDescription: (description) => 
+    ipcRenderer.invoke('terminal-generate-command', { description }),
   
   getSuggestions: (partialCommand, context) => 
     ipcRenderer.invoke('terminal-get-suggestions', { partialCommand, context })
@@ -152,4 +174,34 @@ contextBridge.exposeInMainWorld('collaboration', {
   
   getRooms: () => 
     ipcRenderer.invoke('collab-get-rooms')
+});
+
+// Expose Debug service functions
+contextBridge.exposeInMainWorld('debug', {
+  analyzeCode: (code, language) => 
+    ipcRenderer.invoke('debug-analyze-code', { code, language }),
+  
+  getDebuggingTips: (language) => 
+    ipcRenderer.invoke('debug-get-tips', { language }),
+  
+  generateReport: (sessionId) => 
+    ipcRenderer.invoke('debug-generate-report', { sessionId })
+});
+
+// Expose Snippets service functions
+contextBridge.exposeInMainWorld('snippets', {
+  create: (snippetData) => 
+    ipcRenderer.invoke('snippets-create', { snippetData }),
+  
+  getAll: () => 
+    ipcRenderer.invoke('snippets-get-all'),
+  
+  search: (query) => 
+    ipcRenderer.invoke('snippets-search', { query }),
+  
+  generateSnippetFromAI: (description, language, category) => 
+    ipcRenderer.invoke('snippets-generate-ai', { description, language, category }),
+  
+  delete: (snippetId) => 
+    ipcRenderer.invoke('snippets-delete', { snippetId })
 });

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:">
     <title>Cursor Clone - AI-Powered Code Editor</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -25,6 +26,10 @@
                     <i class="fas fa-save"></i>
                 </button>
                 <div class="separator"></div>
+                <button id="search-btn" class="toolbar-btn" title="Search (Ctrl+F)">
+                    <i class="fas fa-search"></i>
+                </button>
+                <div class="separator"></div>
                 <span id="file-name" class="file-name">Untitled</span>
             </div>
             <div class="toolbar-right">
@@ -36,6 +41,18 @@
                 </button>
                 <button id="toggle-chat-btn" class="toolbar-btn" title="Toggle AI Chat">
                     <i class="fas fa-comments"></i>
+                </button>
+                <button id="toggle-terminal-btn" class="toolbar-btn" title="Toggle AI Terminal">
+                    <i class="fas fa-terminal"></i>
+                </button>
+                <button id="toggle-debug-btn" class="toolbar-btn" title="Toggle AI Debug Assistant">
+                    <i class="fas fa-bug"></i>
+                </button>
+                <button id="toggle-snippets-btn" class="toolbar-btn" title="Toggle AI Snippets">
+                    <i class="fas fa-code"></i>
+                </button>
+                <button id="toggle-analytics-btn" class="toolbar-btn" title="Toggle AI Analytics">
+                    <i class="fas fa-chart-line"></i>
                 </button>
             </div>
         </div>
@@ -70,7 +87,21 @@
 
             <!-- Editor container -->
             <div id="editor-container">
-                <div id="monaco-editor"></div>
+                <!-- Tab bar -->
+                <div id="tab-bar" class="tab-bar">
+                    <div id="tabs-container" class="tabs-container">
+                        <!-- Tabs will be dynamically added here -->
+                    </div>
+                    <div class="tab-actions">
+                        <button id="new-tab-btn" class="tab-action-btn" title="New Tab">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Editor area -->
+                <div id="editor-area" class="editor-area">
+                    <div id="monaco-editor"></div>
+                </div>
             </div>
 
             <!-- AI Chat panel -->
@@ -94,10 +125,39 @@
                                 <li><strong>HuggingFace</strong> - Open source models (free)</li>
                             </ul>
                         </div>
+                        <div class="ai-config-section">
+                            <h5>AI Configuration:</h5>
+                            <div class="ai-provider-selector">
+                                <label for="ai-provider-select">Provider:</label>
+                                <select id="ai-provider-select">
+                                    <option value="auto">Auto (Best Available)</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="ollama">Ollama (Local)</option>
+                                    <option value="huggingface">HuggingFace</option>
+                                </select>
+                            </div>
+                            <div class="ai-model-selector">
+                                <label for="ai-model-select">Model:</label>
+                                <select id="ai-model-select">
+                                    <option value="auto">Auto Select</option>
+                                    <option value="gpt-4o-mini">GPT-4o-mini (Fast)</option>
+                                    <option value="gpt-4o">GPT-4o (Best)</option>
+                                    <option value="gpt-3.5-turbo">GPT-3.5-turbo (Cheap)</option>
+                                    <option value="codellama">CodeLlama (Local)</option>
+                                    <option value="llama2">Llama2 (Local)</option>
+                                    <option value="mistral">Mistral (Local)</option>
+                                </select>
+                            </div>
+                            <div class="ai-settings">
+                                <label for="ai-temperature">Creativity (0-1):</label>
+                                <input type="range" id="ai-temperature" min="0" max="1" step="0.1" value="0.3">
+                                <span id="temperature-value">0.3</span>
+                            </div>
+                        </div>
                         <div class="api-key-notice" id="api-key-notice">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>Please set your AI provider to start using AI features.</span>
-                            <button id="set-ai-provider-btn" class="btn-primary">Configure AI</button>
+                            <button id="set-api-key-chat-btn" class="btn-primary">Set API Key</button>
                         </div>
                     </div>
                 </div>
@@ -121,6 +181,489 @@
                     </div>
                 </div>
             </div>
+
+            <!-- AI Terminal panel -->
+            <div id="terminal-panel" class="terminal-panel">
+                <div class="terminal-header">
+                    <h3><i class="fas fa-terminal"></i> AI Terminal</h3>
+                    <button id="close-terminal-btn" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="terminal-content">
+                    <div class="terminal-output" id="terminal-output">
+                        <div class="terminal-welcome">
+                            <i class="fas fa-robot"></i>
+                            <h4>AI-Powered Terminal</h4>
+                            <p>Describe what you want to do in natural language, and I'll help you with the right commands!</p>
+                            <div class="terminal-examples">
+                                <h5>Examples:</h5>
+                                <ul>
+                                    <li>"List all files in this directory"</li>
+                                    <li>"Install the latest version of Node.js"</li>
+                                    <li>"Find all JavaScript files"</li>
+                                    <li>"Start the development server"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="terminal-input-container">
+                        <div class="terminal-input-wrapper">
+                            <span class="terminal-prompt">$</span>
+                            <input type="text" id="terminal-input" placeholder="Describe what you want to do..." />
+                            <button id="send-terminal-btn" class="send-btn" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="terminal-actions">
+                            <button id="clear-terminal-btn" class="action-btn" title="Clear terminal">
+                                <i class="fas fa-trash"></i> Clear
+                            </button>
+                            <button id="ai-suggest-btn" class="action-btn" title="Get AI command suggestions">
+                                <i class="fas fa-magic"></i> AI Suggest
+                            </button>
+                            <button id="execute-command-btn" class="action-btn" title="Execute last command">
+                                <i class="fas fa-play"></i> Execute
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Debug panel -->
+            <div id="debug-panel" class="debug-panel">
+                <div class="debug-header">
+                    <h3><i class="fas fa-bug"></i> AI Debug Assistant</h3>
+                    <button id="close-debug-btn" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="debug-content">
+                    <div class="debug-tabs">
+                        <button class="debug-tab-btn active" data-tab="analysis">Code Analysis</button>
+                        <button class="debug-tab-btn" data-tab="issues">Issues</button>
+                        <button class="debug-tab-btn" data-tab="suggestions">AI Suggestions</button>
+                        <button class="debug-tab-btn" data-tab="logs">Debug Logs</button>
+                    </div>
+                    
+                    <div class="debug-tab-content">
+                        <!-- Code Analysis Tab -->
+                        <div id="debug-analysis" class="debug-tab-panel active">
+                            <div class="debug-welcome">
+                                <i class="fas fa-search"></i>
+                                <h4>AI-Powered Code Analysis</h4>
+                                <p>Analyze your code for potential issues, bugs, and improvements using AI.</p>
+                                <div class="debug-actions">
+                                    <button id="analyze-current-file" class="btn-primary">
+                                        <i class="fas fa-file-code"></i> Analyze Current File
+                                    </button>
+                                    <button id="analyze-selected-code" class="btn-secondary">
+                                        <i class="fas fa-code"></i> Analyze Selected Code
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="analysis-results" class="analysis-results hidden">
+                                <div class="analysis-summary">
+                                    <h5>Analysis Summary</h5>
+                                    <div id="summary-content"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Issues Tab -->
+                        <div id="debug-issues" class="debug-tab-panel">
+                            <div class="issues-header">
+                                <h5>Detected Issues</h5>
+                                <button id="clear-issues" class="btn-small">Clear All</button>
+                            </div>
+                            <div id="issues-list" class="issues-list">
+                                <div class="no-issues">
+                                    <i class="fas fa-check-circle"></i>
+                                    <p>No issues detected. Run an analysis to check for problems.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Suggestions Tab -->
+                        <div id="debug-suggestions" class="debug-tab-panel">
+                            <div class="suggestions-header">
+                                <h5>AI Suggestions</h5>
+                                <button id="refresh-suggestions" class="btn-small">Refresh</button>
+                            </div>
+                            <div id="suggestions-list" class="suggestions-list">
+                                <div class="no-suggestions">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <p>No suggestions available. Run an analysis to get AI recommendations.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Debug Logs Tab -->
+                        <div id="debug-logs" class="debug-tab-panel">
+                            <div class="logs-header">
+                                <h5>Debug Logs</h5>
+                                <div class="logs-actions">
+                                    <button id="clear-logs" class="btn-small">Clear</button>
+                                    <button id="export-logs" class="btn-small">Export</button>
+                                </div>
+                            </div>
+                            <div id="debug-logs-list" class="debug-logs-list">
+                                <div class="no-logs">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <p>No debug logs yet. Start debugging to see logs here.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Snippets panel -->
+            <div id="snippets-panel" class="snippets-panel">
+                <div class="snippets-header">
+                    <h3><i class="fas fa-code"></i> AI Snippets</h3>
+                    <button id="close-snippets-btn" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="snippets-content">
+                    <div class="snippets-tabs">
+                        <button class="snippets-tab-btn active" data-tab="library">Snippet Library</button>
+                        <button class="snippets-tab-btn" data-tab="create">Create Snippet</button>
+                        <button class="snippets-tab-btn" data-tab="ai-generate">AI Generate</button>
+                    </div>
+                    
+                    <div class="snippets-tab-content">
+                        <!-- Snippet Library Tab -->
+                        <div id="snippets-library" class="snippets-tab-panel active">
+                            <div class="snippets-toolbar">
+                                <div class="snippets-search">
+                                    <input type="text" id="snippets-search-input" placeholder="Search snippets..." />
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <div class="snippets-filters">
+                                    <select id="snippets-language-filter">
+                                        <option value="">All Languages</option>
+                                        <option value="javascript">JavaScript</option>
+                                        <option value="typescript">TypeScript</option>
+                                        <option value="python">Python</option>
+                                        <option value="java">Java</option>
+                                        <option value="cpp">C++</option>
+                                        <option value="html">HTML</option>
+                                        <option value="css">CSS</option>
+                                    </select>
+                                    <select id="snippets-category-filter">
+                                        <option value="">All Categories</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="snippets-list" class="snippets-list">
+                                <div class="snippets-loading">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <p>Loading snippets...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Create Snippet Tab -->
+                        <div id="snippets-create" class="snippets-tab-panel">
+                            <div class="snippet-form">
+                                <div class="form-group">
+                                    <label for="snippet-name">Name</label>
+                                    <input type="text" id="snippet-name" placeholder="Enter snippet name" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="snippet-description">Description</label>
+                                    <textarea id="snippet-description" placeholder="Describe what this snippet does" rows="2"></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="snippet-language">Language</label>
+                                        <select id="snippet-language">
+                                            <option value="javascript">JavaScript</option>
+                                            <option value="typescript">TypeScript</option>
+                                            <option value="python">Python</option>
+                                            <option value="java">Java</option>
+                                            <option value="cpp">C++</option>
+                                            <option value="html">HTML</option>
+                                            <option value="css">CSS</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="snippet-category">Category</label>
+                                        <input type="text" id="snippet-category" placeholder="e.g., React, Utils" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="snippet-code">Code</label>
+                                    <textarea id="snippet-code" placeholder="Enter your code snippet" rows="8"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="snippet-tags">Tags (comma-separated)</label>
+                                    <input type="text" id="snippet-tags" placeholder="react, component, hook" />
+                                </div>
+                                <div class="form-actions">
+                                    <button id="save-snippet-btn" class="btn-primary">
+                                        <i class="fas fa-save"></i> Save Snippet
+                                    </button>
+                                    <button id="clear-snippet-form-btn" class="btn-secondary">
+                                        <i class="fas fa-trash"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Generate Tab -->
+                        <div id="snippets-ai-generate" class="snippets-tab-panel">
+                            <div class="ai-generate-welcome">
+                                <i class="fas fa-magic"></i>
+                                <h4>AI-Powered Snippet Generation</h4>
+                                <p>Describe what you want to create and AI will generate the code snippet for you.</p>
+                            </div>
+                            <div class="ai-generate-form">
+                                <div class="form-group">
+                                    <label for="ai-snippet-description">Description</label>
+                                    <textarea id="ai-snippet-description" placeholder="Describe the code you want to generate, e.g., 'A React hook for managing form state with validation'" rows="3"></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="ai-snippet-language">Language</label>
+                                        <select id="ai-snippet-language">
+                                            <option value="javascript">JavaScript</option>
+                                            <option value="typescript">TypeScript</option>
+                                            <option value="python">Python</option>
+                                            <option value="java">Java</option>
+                                            <option value="cpp">C++</option>
+                                            <option value="html">HTML</option>
+                                            <option value="css">CSS</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="ai-snippet-category">Category</label>
+                                        <input type="text" id="ai-snippet-category" placeholder="e.g., React, Utils" />
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button id="generate-snippet-btn" class="btn-primary">
+                                        <i class="fas fa-magic"></i> Generate Snippet
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="ai-generated-snippet" class="ai-generated-snippet hidden">
+                                <h5>Generated Snippet</h5>
+                                <div class="generated-snippet-preview">
+                                    <div class="snippet-header">
+                                        <span class="snippet-name-preview"></span>
+                                        <button id="use-generated-snippet" class="btn-small">Use This Snippet</button>
+                                    </div>
+                                    <pre class="snippet-code-preview"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Analytics panel -->
+            <div id="analytics-panel" class="analytics-panel">
+                <div class="analytics-header">
+                    <h3><i class="fas fa-chart-line"></i> AI Analytics</h3>
+                    <button id="close-analytics-btn" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="analytics-content">
+                    <div class="analytics-tabs">
+                        <button class="analytics-tab-btn active" data-tab="overview">Overview</button>
+                        <button class="analytics-tab-btn" data-tab="ai-usage">AI Usage</button>
+                        <button class="analytics-tab-btn" data-tab="performance">Performance</button>
+                        <button class="analytics-tab-btn" data-tab="insights">Insights</button>
+                    </div>
+                    
+                    <div class="analytics-tab-content">
+                        <!-- Overview Tab -->
+                        <div id="analytics-overview" class="analytics-tab-panel active">
+                            <div class="analytics-welcome">
+                                <i class="fas fa-chart-bar"></i>
+                                <h4>AI Analytics Dashboard</h4>
+                                <p>Track your AI usage patterns, performance metrics, and get insights into your coding habits.</p>
+                            </div>
+                            <div class="analytics-stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="total-ai-requests">0</div>
+                                        <div class="stat-label">AI Requests</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="avg-response-time">0ms</div>
+                                        <div class="stat-label">Avg Response</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-code"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="lines-generated">0</div>
+                                        <div class="stat-label">Lines Generated</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-bug"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="issues-found">0</div>
+                                        <div class="stat-label">Issues Found</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Usage Tab -->
+                        <div id="analytics-ai-usage" class="analytics-tab-panel">
+                            <div class="usage-section">
+                                <h5>AI Provider Usage</h5>
+                                <div id="provider-usage-chart" class="usage-chart">
+                                    <div class="chart-placeholder">
+                                        <i class="fas fa-chart-pie"></i>
+                                        <p>Provider usage statistics</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="usage-section">
+                                <h5>Feature Usage</h5>
+                                <div id="feature-usage-list" class="feature-list">
+                                    <div class="feature-item">
+                                        <span class="feature-name">Code Completion</span>
+                                        <span class="feature-count">0</span>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-name">Chat Assistant</span>
+                                        <span class="feature-count">0</span>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-name">Code Refactoring</span>
+                                        <span class="feature-count">0</span>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-name">Debug Analysis</span>
+                                        <span class="feature-count">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Performance Tab -->
+                        <div id="analytics-performance" class="analytics-tab-panel">
+                            <div class="performance-section">
+                                <h5>Response Times</h5>
+                                <div id="response-time-chart" class="performance-chart">
+                                    <div class="chart-placeholder">
+                                        <i class="fas fa-chart-line"></i>
+                                        <p>Response time trends</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="performance-section">
+                                <h5>System Performance</h5>
+                                <div class="performance-metrics">
+                                    <div class="metric-item">
+                                        <span class="metric-label">Memory Usage</span>
+                                        <span class="metric-value" id="memory-usage">0 MB</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">CPU Usage</span>
+                                        <span class="metric-value" id="cpu-usage">0%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Session Duration</span>
+                                        <span class="metric-value" id="session-duration">0m</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Insights Tab -->
+                        <div id="analytics-insights" class="analytics-tab-panel">
+                            <div class="insights-section">
+                                <h5>AI Insights</h5>
+                                <div id="ai-insights-list" class="insights-list">
+                                    <div class="insight-item">
+                                        <i class="fas fa-lightbulb"></i>
+                                        <div class="insight-content">
+                                            <h6>Most Used Feature</h6>
+                                            <p>Code completion is your most frequently used AI feature.</p>
+                                        </div>
+                                    </div>
+                                    <div class="insight-item">
+                                        <i class="fas fa-trending-up"></i>
+                                        <div class="insight-content">
+                                            <h6>Productivity Trend</h6>
+                                            <p>Your coding productivity has increased by 25% this week.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="insights-actions">
+                                <button id="refresh-analytics" class="btn-primary">
+                                    <i class="fas fa-sync-alt"></i> Refresh Data
+                                </button>
+                                <button id="export-analytics" class="btn-secondary">
+                                    <i class="fas fa-download"></i> Export Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div id="search-bar" class="search-bar hidden">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search..." />
+                <div class="search-options">
+                    <label>
+                        <input type="checkbox" id="case-sensitive" />
+                        Case sensitive
+                    </label>
+                    <label>
+                        <input type="checkbox" id="whole-word" />
+                        Whole word
+                    </label>
+                    <label>
+                        <input type="checkbox" id="regex" />
+                        Regex
+                    </label>
+                </div>
+                <div class="search-actions">
+                    <button id="search-prev" class="search-btn" title="Previous">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <button id="search-next" class="search-btn" title="Next">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <button id="search-replace" class="search-btn" title="Replace">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                    <button id="search-close" class="search-btn" title="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="replace-container" class="replace-container hidden">
+                <input type="text" id="replace-input" placeholder="Replace with..." />
+                <button id="replace-all" class="search-btn">Replace All</button>
+            </div>
         </div>
 
         <!-- Status bar -->
@@ -134,6 +677,29 @@
                 <span id="ai-status" class="ai-status">
                     <i class="fas fa-circle"></i> AI Ready
                 </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-key"></i> Set API Key</h3>
+                <button id="close-modal-btn" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Enter your OpenAI API key to enable AI features:</p>
+                <div class="input-group">
+                    <label for="api-key-input">API Key:</label>
+                    <input type="password" id="api-key-input" placeholder="sk-..." />
+                </div>
+                <div class="modal-actions">
+                    <button id="save-api-key-btn" class="btn-primary">Save</button>
+                    <button id="cancel-api-key-btn" class="btn-secondary">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
