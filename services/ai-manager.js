@@ -205,12 +205,20 @@ class AIManager {
             { value: 'gpt-3.5-turbo', label: 'GPT-3.5-turbo' }
           ];
         case 'ollama':
-          return [
-            { value: 'codellama', label: 'CodeLlama (Recommended)' },
-            { value: 'llama2', label: 'Llama2' },
-            { value: 'mistral', label: 'Mistral' },
-            { value: 'phi', label: 'Phi-2' }
-          ];
+          try {
+            const { OllamaService } = require('./ollama-service');
+            const ollamaService = new OllamaService();
+            const models = await ollamaService.getAvailableModels();
+            return models.map(model => ({
+              value: model.name,
+              label: `${model.name} (${Math.round(model.size / 1024 / 1024 / 1024 * 10) / 10}GB)`
+            }));
+          } catch (error) {
+            console.error('Failed to fetch Ollama models:', error);
+            return [
+              { value: 'llama3.2:1b', label: 'llama3.2:1b (Default)' }
+            ];
+          }
         case 'huggingface':
           return [
             { value: 'microsoft/DialoGPT-medium', label: 'DialoGPT Medium (Chat)' },
@@ -273,6 +281,15 @@ class AIManager {
       default:
         return {};
     }
+  }
+
+  /**
+   * Check if there's a valid API key configured
+   */
+  async hasValidApiKey() {
+    // Always return false to prevent automatic initialization on startup
+    // Users must manually configure providers through the UI
+    return false;
   }
 }
 

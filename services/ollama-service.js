@@ -121,6 +121,10 @@ Be concise, helpful, and provide practical solutions. If code context is provide
       : message;
 
     try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
       const response = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: {
@@ -133,10 +137,15 @@ Be concise, helpful, and provide practical solutions. If code context is provide
           options: {
             temperature: 0.3,
             top_p: 0.9,
-            max_tokens: 1000
+            num_predict: 500,  // Reduced from max_tokens for faster response
+            num_ctx: 2048,     // Context window
+            num_thread: 4      // Use 4 threads for faster processing
           }
-        })
+        }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -146,7 +155,14 @@ Be concise, helpful, and provide practical solutions. If code context is provide
       return data.response || 'No response received';
     } catch (error) {
       console.error('Ollama API error:', error);
-      throw new Error(`Ollama chat failed: ${error.message}`);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Ollama request timed out. The model is taking too long to respond. Try a shorter question.');
+      } else if (error.code === 'UND_ERR_HEADERS_TIMEOUT') {
+        throw new Error('Ollama connection timeout. Make sure Ollama is running and try again.');
+      } else {
+        throw new Error(`Ollama chat failed: ${error.message}`);
+      }
     }
   }
 

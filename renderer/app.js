@@ -164,6 +164,9 @@ async function init() {
         // Set up event listeners
         setupEventListeners();
         
+        // Initialize chat panel
+        initializeChatPanel();
+        
         // Check API key status
         await checkApiKeyStatus();
         
@@ -325,6 +328,14 @@ function setupEventListeners() {
             sendChatMessage();
         }
     });
+
+    // AI Provider Selection in Chat Panel
+    if (elements.aiProviderSelect) {
+        elements.aiProviderSelect.addEventListener('change', handleAiProviderChange);
+    }
+    if (elements.aiModelSelect) {
+        elements.aiModelSelect.addEventListener('change', handleAiModelChange);
+    }
 
     // Modal
     elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
@@ -877,12 +888,128 @@ function hideChatPanel() {
     elements.toggleChatBtn.classList.remove('active');
 }
 
+// AI Provider Selection Handlers
+async function handleAiProviderChange() {
+    const provider = elements.aiProviderSelect.value;
+    console.log('AI Provider changed to:', provider);
+    
+    // Update model options based on provider
+    await updateModelOptions(provider);
+    
+    // Set the provider in the AI manager
+    try {
+        if (provider === 'ollama') {
+            // Use the configured Ollama settings
+            const result = await window.ai.initializeProvider('ollama', {
+                baseUrl: 'http://127.0.0.1:11434',
+                model: 'llama3.2:1b'
+            });
+            if (result.success) {
+                console.log('Ollama provider set successfully');
+                updateAiProviderStatus('ollama', 'Connected');
+            } else {
+                console.error('Failed to set Ollama provider:', result.error);
+                updateAiProviderStatus('ollama', 'Connection Failed');
+            }
+        } else if (provider === 'openai') {
+            // For OpenAI, we need an API key
+            if (!apiKeySet) {
+                showApiKeyModal();
+                return;
+            }
+            updateAiProviderStatus('openai', 'Configured');
+        }
+    } catch (error) {
+        console.error('Error setting AI provider:', error);
+        updateAiProviderStatus(provider, 'Error');
+    }
+}
+
+async function handleAiModelChange() {
+    const model = elements.aiModelSelect.value;
+    console.log('AI Model changed to:', model);
+    
+    // Update the model in the current provider
+    try {
+        // This would need to be implemented in the AI manager
+        // For now, just log the change
+        console.log('Model updated to:', model);
+    } catch (error) {
+        console.error('Error setting AI model:', error);
+    }
+}
+
+async function updateModelOptions(provider) {
+    const modelSelect = elements.aiModelSelect;
+    if (!modelSelect) return;
+    
+    // Clear existing options
+    modelSelect.innerHTML = '';
+    
+    if (provider === 'ollama') {
+        // Add Ollama models
+        const option1 = document.createElement('option');
+        option1.value = 'llama3.2:1b';
+        option1.textContent = 'llama3.2:1b (1.2GB)';
+        modelSelect.appendChild(option1);
+        
+        const option2 = document.createElement('option');
+        option2.value = 'codellama';
+        option2.textContent = 'CodeLlama (Recommended)';
+        modelSelect.appendChild(option2);
+    } else if (provider === 'openai') {
+        // Add OpenAI models
+        const models = [
+            { value: 'gpt-4o-mini', text: 'GPT-4o-mini (Fast)' },
+            { value: 'gpt-4o', text: 'GPT-4o (Best)' },
+            { value: 'gpt-3.5-turbo', text: 'GPT-3.5-turbo (Cheap)' }
+        ];
+        
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.value;
+            option.textContent = model.text;
+            modelSelect.appendChild(option);
+        });
+    } else {
+        // Auto or other providers
+        const option = document.createElement('option');
+        option.value = 'auto';
+        option.textContent = 'Auto Select';
+        modelSelect.appendChild(option);
+    }
+}
+
+function updateAiProviderStatus(provider, status) {
+    if (elements.aiProviderStatus) {
+        elements.aiProviderStatus.textContent = `${provider}: ${status}`;
+        elements.aiProviderStatus.className = `ai-provider-status ${status.toLowerCase().replace(' ', '-')}`;
+    }
+}
+
+function initializeChatPanel() {
+    // Set default AI provider to Ollama since it's configured
+    if (elements.aiProviderSelect) {
+        elements.aiProviderSelect.value = 'ollama';
+        // Trigger the change event to set up the provider
+        handleAiProviderChange();
+    }
+    
+    // Set default model
+    if (elements.aiModelSelect) {
+        elements.aiModelSelect.value = 'llama3.2:1b';
+    }
+}
+
 // Chat functionality
 async function sendChatMessage() {
     const message = elements.chatInput.value.trim();
     if (!message) return;
 
-    if (!apiKeySet) {
+    // Check if we have a valid AI provider configured
+    const provider = elements.aiProviderSelect ? elements.aiProviderSelect.value : 'auto';
+    
+    if (provider === 'openai' && !apiKeySet) {
         showApiKeyModal();
         return;
     }
@@ -893,14 +1020,18 @@ async function sendChatMessage() {
     elements.sendChatBtn.disabled = true;
 
     try {
-        showLoading(true);
-        const response = await window.ai.chat(message);
-        addChatMessage(response, 'ai');
+        showChatLoading(true);
+        const result = await window.ai.chat(message);
+        if (result.success) {
+            addChatMessage(result.response, 'ai');
+        } else {
+            addChatMessage(`Error: ${result.error}`, 'ai');
+        }
     } catch (error) {
         addChatMessage(`Error: ${error.message}`, 'ai');
         console.error('Chat error:', error);
     } finally {
-        showLoading(false);
+        showChatLoading(false);
     }
 }
 
@@ -917,14 +1048,18 @@ async function sendSelectedCode() {
     addChatMessage(message, 'user');
     
     try {
-        showLoading(true);
-        const response = await window.ai.chat('Please analyze this code and provide suggestions or explanations.', selectedCode);
-        addChatMessage(response, 'ai');
+        showChatLoading(true);
+        const result = await window.ai.chat('Please analyze this code and provide suggestions or explanations.', selectedCode);
+        if (result.success) {
+            addChatMessage(result.response, 'ai');
+        } else {
+            addChatMessage(`Error: ${result.error}`, 'ai');
+        }
     } catch (error) {
         addChatMessage(`Error: ${error.message}`, 'ai');
         console.error('Chat error:', error);
     } finally {
-        showLoading(false);
+        showChatLoading(false);
     }
 }
 
@@ -940,14 +1075,18 @@ async function sendFileContent() {
     addChatMessage(message, 'user');
     
     try {
-        showLoading(true);
-        const response = await window.ai.chat('Please analyze this code and provide suggestions or explanations.', content);
-        addChatMessage(response, 'ai');
+        showChatLoading(true);
+        const result = await window.ai.chat('Please analyze this code and provide suggestions or explanations.', content);
+        if (result.success) {
+            addChatMessage(result.response, 'ai');
+        } else {
+            addChatMessage(`Error: ${result.error}`, 'ai');
+        }
     } catch (error) {
         addChatMessage(`Error: ${error.message}`, 'ai');
         console.error('Chat error:', error);
     } finally {
-        showLoading(false);
+        showChatLoading(false);
     }
 }
 
@@ -958,8 +1097,11 @@ function addChatMessage(content, sender) {
     const bubbleDiv = document.createElement('div');
     bubbleDiv.className = 'message-bubble';
     
+    // Ensure content is a string
+    const contentStr = typeof content === 'string' ? content : String(content || '');
+    
     // Format code blocks
-    const formattedContent = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+    const formattedContent = contentStr.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
         return `<pre><code>${code.trim()}</code></pre>`;
     });
     
@@ -974,6 +1116,31 @@ function addChatMessage(content, sender) {
     
     elements.chatMessages.appendChild(messageDiv);
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+
+function showChatLoading(show) {
+    if (show) {
+        // Add a loading message to the chat
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'chat-message ai loading';
+        loadingDiv.id = 'chat-loading-message';
+        loadingDiv.innerHTML = `
+            <div class="message-bubble">
+                <div class="loading-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <span class="loading-text">AI is thinking...</span>
+            </div>
+        `;
+        elements.chatMessages.appendChild(loadingDiv);
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+    } else {
+        // Remove the loading message
+        const loadingMessage = document.getElementById('chat-loading-message');
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
+    }
 }
 
 // AI completion functionality
@@ -1151,15 +1318,54 @@ function hideApiKeyNotice() {
 }
 
 // AI Provider Modal functions
-function showAiProviderModal() {
+async function showAiProviderModal() {
     if (elements.aiProviderModal) {
         elements.aiProviderModal.classList.add('show');
+        
+        // Populate Ollama models when modal opens
+        await populateOllamaModels();
     }
 }
 
 function hideAiProviderModal() {
     if (elements.aiProviderModal) {
         elements.aiProviderModal.classList.remove('show');
+    }
+}
+
+async function populateOllamaModels() {
+    try {
+        const result = await window.ai.getAvailableModels('ollama');
+        if (result.success && result.models && result.models.length > 0) {
+            const modelSelect = document.getElementById('ollama-model');
+            if (modelSelect) {
+                // Clear existing options
+                modelSelect.innerHTML = '';
+                
+                // Add models from Ollama
+                result.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.value;
+                    option.textContent = model.label;
+                    modelSelect.appendChild(option);
+                });
+                return; // Success, exit early
+            }
+        }
+    } catch (error) {
+        console.error('Failed to populate Ollama models:', error);
+    }
+    
+    // Fallback: Use hardcoded options if Ollama is not available
+    const modelSelect = document.getElementById('ollama-model');
+    if (modelSelect) {
+        modelSelect.innerHTML = `
+            <option value="llama3.2:1b">llama3.2:1b (1.2GB)</option>
+            <option value="codellama">CodeLlama (Recommended)</option>
+            <option value="llama2">Llama2</option>
+            <option value="mistral">Mistral</option>
+            <option value="phi">Phi-2</option>
+        `;
     }
 }
 
