@@ -2479,3 +2479,180 @@ body {
     gap: 8px;
     justify-content: center;
 }
+
+/* Simplified AI Provider Modal Styles */
+.ai-provider-simple {
+    padding: 20px 0;
+}
+
+.ai-provider-simple h4 {
+    color: #ffffff;
+    font-size: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.ai-provider-simple p {
+    color: #cccccc;
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.provider-options {
+    margin-bottom: 20px;
+}
+
+.provider-option {
+    margin-bottom: 12px;
+}
+
+.provider-option input[type="radio"] {
+    display: none;
+}
+
+.provider-option label {
+    display: block;
+    padding: 12px 16px;
+    background-color: #2d2d30;
+    border: 2px solid #3e3e42;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.provider-option label:hover {
+    background-color: #3e3e42;
+    border-color: #007acc;
+}
+
+.provider-option input[type="radio"]:checked + label {
+    background-color: #1e3a5f;
+    border-color: #007acc;
+    color: #ffffff;
+}
+
+.provider-option label strong {
+    display: block;
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.provider-option label span {
+    display: block;
+    color: #cccccc;
+    font-size: 12px;
+}
+
+.provider-config {
+    background-color: #2d2d30;
+    border: 1px solid #3e3e42;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.provider-config.hidden {
+    display: none;
+}
+
+.provider-config .input-group {
+    margin-bottom: 12px;
+}
+
+.provider-config .input-group:last-child {
+    margin-bottom: 0;
+}
+
+.provider-config small {
+    display: block;
+    color: #888888;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.provider-config small a {
+    color: #007acc;
+    text-decoration: none;
+}
+
+.provider-config small a:hover {
+    text-decoration: underline;
+}
+
+.ollama-info {
+    background-color: #1e1e1e;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 12px;
+}
+
+.ollama-info p {
+    margin: 4px 0;
+    font-size: 12px;
+    color: #cccccc;
+}
+
+.ollama-info code {
+    background-color: #2d2d30;
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+/* Ghost text styling for inline completions */
+.ghost-text {
+    color: #888888 !important;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* Drag and drop styling */
+.drag-over {
+    background-color: rgba(0, 122, 204, 0.1) !important;
+    border: 2px dashed #007acc !important;
+}
+
+/* Recent files styling */
+.recent-files-section {
+    margin-bottom: 16px;
+    border-bottom: 1px solid #3e3e42;
+    padding-bottom: 12px;
+}
+
+.file-tree-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #cccccc;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.file-tree-header i {
+    color: #007acc;
+}
+
+.recent-files-list {
+    margin-top: 4px;
+}
+
+.recent-file {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.recent-file:hover {
+    background-color: #3e3e42;
+}
+
+.recent-file i {
+    color: #888888;
+}

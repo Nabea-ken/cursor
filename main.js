@@ -214,30 +214,17 @@ function initializeAIService() {
   aiService = new AIManager();
 }
 
-// Initialize additional services
+// Initialize additional services (lazy loaded)
 let gitService = null;
 let terminalService = null;
 let snippetsService = null;
-let debugService = null;
 let databaseService = null;
-let collaborationService = null;
-let analyticsService = null;
 
-function initializeServices() {
+// Core services that are always needed
+function initializeCoreServices() {
   try {
-    const { GitService } = require('./services/git-service');
-    const { TerminalService } = require('./services/terminal-service');
-    const { SnippetsService } = require('./services/snippets-service');
-    const { DebugService } = require('./services/debug-service');
     const { DatabaseService } = require('./services/database-service');
-    const { CollaborationService } = require('./services/collaboration-service');
-    
-    gitService = new GitService();
-    terminalService = new TerminalService();
-    snippetsService = new SnippetsService();
-    debugService = new DebugService();
     databaseService = new DatabaseService();
-    collaborationService = new CollaborationService();
     
     // Initialize database service
     databaseService.initialize().then(() => {
@@ -246,20 +233,35 @@ function initializeServices() {
       console.error('Database initialization failed:', error);
     });
     
-    // Initialize collaboration service
-    collaborationService.initialize({
-      userId: `user_${Date.now()}`,
-      userName: 'Developer'
-    }).then(() => {
-      console.log('Collaboration service initialized');
-    }).catch(error => {
-      console.error('Collaboration initialization failed:', error);
-    });
-    
-    console.log('All services initialized successfully');
+    console.log('Core services initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize services:', error);
+    console.error('Failed to initialize core services:', error);
   }
+}
+
+// Lazy load services when needed
+function getGitService() {
+  if (!gitService) {
+    const { GitService } = require('./services/git-service');
+    gitService = new GitService();
+  }
+  return gitService;
+}
+
+function getTerminalService() {
+  if (!terminalService) {
+    const { TerminalService } = require('./services/terminal-service');
+    terminalService = new TerminalService();
+  }
+  return terminalService;
+}
+
+function getSnippetsService() {
+  if (!snippetsService) {
+    const { SnippetsService } = require('./services/snippets-service');
+    snippetsService = new SnippetsService();
+  }
+  return snippetsService;
 }
 
 // IPC handlers for AI functionality
@@ -434,10 +436,7 @@ ipcMain.handle('clear-ai-provider', async () => {
 // Git service handlers
 ipcMain.handle('git-initialize', async (event, { directoryPath }) => {
   try {
-    if (!gitService) {
-      throw new Error('Git service not initialized');
-    }
-    
+    const gitService = getGitService();
     const result = await gitService.initialize(directoryPath);
     return { success: true, result };
   } catch (error) {
@@ -448,10 +447,7 @@ ipcMain.handle('git-initialize', async (event, { directoryPath }) => {
 
 ipcMain.handle('git-get-status', async () => {
   try {
-    if (!gitService) {
-      throw new Error('Git service not initialized');
-    }
-    
+    const gitService = getGitService();
     const result = await gitService.getStatus();
     return { success: true, result };
   } catch (error) {
@@ -462,10 +458,7 @@ ipcMain.handle('git-get-status', async () => {
 
 ipcMain.handle('git-get-context', async (event, { filePath }) => {
   try {
-    if (!gitService) {
-      throw new Error('Git service not initialized');
-    }
-    
+    const gitService = getGitService();
     const result = await gitService.getAIContext(filePath);
     return { success: true, result };
   } catch (error) {
@@ -477,10 +470,7 @@ ipcMain.handle('git-get-context', async (event, { filePath }) => {
 // Terminal service handlers
 ipcMain.handle('terminal-execute', async (event, { command, sessionId }) => {
   try {
-    if (!terminalService) {
-      throw new Error('Terminal service not initialized');
-    }
-    
+    const terminalService = getTerminalService();
     const result = await terminalService.executeCommand(command, sessionId);
     return { success: true, result };
   } catch (error) {
@@ -491,10 +481,7 @@ ipcMain.handle('terminal-execute', async (event, { command, sessionId }) => {
 
 ipcMain.handle('terminal-execute-ai', async (event, { description, sessionId }) => {
   try {
-    if (!terminalService) {
-      throw new Error('Terminal service not initialized');
-    }
-    
+    const terminalService = getTerminalService();
     const result = await terminalService.executeWithAI(description, sessionId);
     return { success: true, result };
   } catch (error) {
@@ -505,10 +492,7 @@ ipcMain.handle('terminal-execute-ai', async (event, { description, sessionId }) 
 
 ipcMain.handle('terminal-get-suggestions', async (event, { partialCommand, context }) => {
   try {
-    if (!terminalService) {
-      throw new Error('Terminal service not initialized');
-    }
-    
+    const terminalService = getTerminalService();
     const suggestions = terminalService.getCommandSuggestions(partialCommand, context);
     return { success: true, suggestions };
   } catch (error) {
@@ -519,10 +503,7 @@ ipcMain.handle('terminal-get-suggestions', async (event, { partialCommand, conte
 
 ipcMain.handle('terminal-generate-command', async (event, { description }) => {
   try {
-    if (!terminalService) {
-      throw new Error('Terminal service not initialized');
-    }
-    
+    const terminalService = getTerminalService();
     const command = await terminalService.generateCommandFromDescription(description);
     return { success: true, command };
   } catch (error) {
@@ -534,10 +515,7 @@ ipcMain.handle('terminal-generate-command', async (event, { description }) => {
 // Snippets service handlers
 ipcMain.handle('snippets-create', async (event, { snippetData }) => {
   try {
-    if (!snippetsService) {
-      throw new Error('Snippets service not initialized');
-    }
-    
+    const snippetsService = getSnippetsService();
     const result = await snippetsService.createSnippet(snippetData);
     return { success: true, result };
   } catch (error) {
@@ -548,10 +526,7 @@ ipcMain.handle('snippets-create', async (event, { snippetData }) => {
 
 ipcMain.handle('snippets-get-all', async () => {
   try {
-    if (!snippetsService) {
-      throw new Error('Snippets service not initialized');
-    }
-    
+    const snippetsService = getSnippetsService();
     const snippets = snippetsService.getAllSnippets();
     return { success: true, snippets };
   } catch (error) {
@@ -562,10 +537,7 @@ ipcMain.handle('snippets-get-all', async () => {
 
 ipcMain.handle('snippets-search', async (event, { query }) => {
   try {
-    if (!snippetsService) {
-      throw new Error('Snippets service not initialized');
-    }
-    
+    const snippetsService = getSnippetsService();
     const snippets = snippetsService.searchSnippets(query);
     return { success: true, snippets };
   } catch (error) {
@@ -576,10 +548,7 @@ ipcMain.handle('snippets-search', async (event, { query }) => {
 
 ipcMain.handle('snippets-generate-ai', async (event, { description, language, category }) => {
   try {
-    if (!snippetsService) {
-      throw new Error('Snippets service not initialized');
-    }
-    
+    const snippetsService = getSnippetsService();
     const result = await snippetsService.generateSnippetFromAI(description, language, category);
     return { success: true, snippet: result };
   } catch (error) {
@@ -590,10 +559,7 @@ ipcMain.handle('snippets-generate-ai', async (event, { description, language, ca
 
 ipcMain.handle('snippets-delete', async (event, { snippetId }) => {
   try {
-    if (!snippetsService) {
-      throw new Error('Snippets service not initialized');
-    }
-    
+    const snippetsService = getSnippetsService();
     const result = await snippetsService.deleteSnippet(snippetId);
     return { success: true, result };
   } catch (error) {
@@ -631,133 +597,6 @@ ipcMain.handle('db-get-preference', async (event, { key, defaultValue }) => {
   }
 });
 
-ipcMain.handle('db-log-ai-interaction', async (event, { interaction }) => {
-  try {
-    if (!databaseService) {
-      throw new Error('Database service not initialized');
-    }
-    
-    const result = await databaseService.logAIInteraction(interaction);
-    return { success: true, result };
-  } catch (error) {
-    console.error('Database log AI interaction error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('db-get-analytics', async () => {
-  try {
-    if (!databaseService) {
-      throw new Error('Database service not initialized');
-    }
-    
-    const analytics = await databaseService.getAnalytics();
-    return { success: true, analytics };
-  } catch (error) {
-    console.error('Database get analytics error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// Collaboration service handlers
-ipcMain.handle('collab-create-room', async (event, { roomConfig }) => {
-  try {
-    if (!collaborationService) {
-      throw new Error('Collaboration service not initialized');
-    }
-    
-    const result = await collaborationService.createRoom(roomConfig);
-    return result;
-  } catch (error) {
-    console.error('Collaboration create room error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('collab-join-room', async (event, { roomId, password }) => {
-  try {
-    if (!collaborationService) {
-      throw new Error('Collaboration service not initialized');
-    }
-    
-    const result = await collaborationService.joinRoom(roomId, password);
-    return result;
-  } catch (error) {
-    console.error('Collaboration join room error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('collab-send-message', async (event, { roomId, message }) => {
-  try {
-    if (!collaborationService) {
-      throw new Error('Collaboration service not initialized');
-    }
-    
-    const result = await collaborationService.sendMessage(roomId, message);
-    return result;
-  } catch (error) {
-    console.error('Collaboration send message error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('collab-get-rooms', async () => {
-  try {
-    if (!collaborationService) {
-      throw new Error('Collaboration service not initialized');
-    }
-    
-    const result = await collaborationService.getAllRooms();
-    return result;
-  } catch (error) {
-    console.error('Collaboration get rooms error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-// Debug service handlers
-ipcMain.handle('debug-analyze-code', async (event, { code, language }) => {
-  try {
-    if (!debugService) {
-      throw new Error('Debug service not initialized');
-    }
-    
-    const result = await debugService.analyzeCode(code, language);
-    return result;
-  } catch (error) {
-    console.error('Debug analyze code error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('debug-get-tips', async (event, { language }) => {
-  try {
-    if (!debugService) {
-      throw new Error('Debug service not initialized');
-    }
-    
-    const tips = debugService.getDebuggingTips(language);
-    return { success: true, tips };
-  } catch (error) {
-    console.error('Debug get tips error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('debug-generate-report', async (event, { sessionId }) => {
-  try {
-    if (!debugService) {
-      throw new Error('Debug service not initialized');
-    }
-    
-    const result = debugService.generateReport(sessionId);
-    return result;
-  } catch (error) {
-    console.error('Debug generate report error:', error);
-    return { success: false, error: error.message };
-  }
-});
 
 // File operation handlers
 ipcMain.handle('open-file', async () => {
@@ -902,7 +741,7 @@ app.whenReady().then(() => {
   createWindow();
   createMenu();
   initializeAIService();
-  initializeServices();
+  initializeCoreServices(); // Only initialize core services at startup
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

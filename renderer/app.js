@@ -10,6 +10,7 @@ let activeTabId = null;
 let tabCounter = 0;
 let currentWorkspace = null;
 let fileTreeData = [];
+let recentFiles = [];
 
 // DOM elements
 const elements = {
@@ -79,9 +80,16 @@ const elements = {
     aiProviderModal: document.getElementById('ai-provider-modal'),
     closeAiModalBtn: document.getElementById('close-ai-modal-btn'),
     saveAiConfigBtn: document.getElementById('save-ai-config-btn'),
-    testAiConnectionBtn: document.getElementById('test-ai-connection-btn'),
     cancelAiConfigBtn: document.getElementById('cancel-ai-config-btn'),
     aiProviderBtn: document.getElementById('ai-provider-btn'),
+    
+    // Simplified AI Provider elements
+    providerOpenAI: document.getElementById('provider-openai'),
+    providerOllama: document.getElementById('provider-ollama'),
+    openaiConfig: document.getElementById('openai-config'),
+    ollamaConfig: document.getElementById('ollama-config'),
+    openaiApiKey: document.getElementById('openai-api-key'),
+    ollamaUrl: document.getElementById('ollama-url'),
     
     // Search elements
     searchBtn: document.getElementById('search-btn'),
@@ -309,6 +317,9 @@ function setupEventListeners() {
     if (elements.refreshExplorerBtn) {
         elements.refreshExplorerBtn.addEventListener('click', refreshFileTree);
     }
+    
+    // Add drag and drop functionality
+    setupDragAndDrop();
 
     // Chat panel
     elements.closeChatBtn.addEventListener('click', hideChatPanel);
@@ -357,6 +368,25 @@ function setupEventListeners() {
     }
     if (elements.cancelAiConfigBtn) {
         elements.cancelAiConfigBtn.addEventListener('click', hideAiProviderModal);
+    }
+    
+    // Simplified AI Provider selection
+    if (elements.providerOpenAI) {
+        elements.providerOpenAI.addEventListener('change', () => {
+            if (elements.providerOpenAI.checked) {
+                elements.openaiConfig.classList.remove('hidden');
+                elements.ollamaConfig.classList.add('hidden');
+            }
+        });
+    }
+    
+    if (elements.providerOllama) {
+        elements.providerOllama.addEventListener('change', () => {
+            if (elements.providerOllama.checked) {
+                elements.ollamaConfig.classList.remove('hidden');
+                elements.openaiConfig.classList.add('hidden');
+            }
+        });
     }
     
     // AI Provider Modal tab switching
@@ -1143,7 +1173,10 @@ function showChatLoading(show) {
     }
 }
 
-// AI completion functionality
+// Enhanced AI completion functionality with caching and better context
+let completionCache = new Map();
+let lastCompletionRequest = null;
+
 function triggerInlineCompletion() {
     if (completionTimeout) {
         clearTimeout(completionTimeout);
@@ -1151,28 +1184,102 @@ function triggerInlineCompletion() {
     
     completionTimeout = setTimeout(async () => {
         try {
+            if (!apiKeySet) return;
+            
             const position = editor.getPosition();
             const model = editor.getModel();
             const text = model.getValue();
             
+            // Create a cache key based on context
+            const contextLines = getContextLines(text, position.lineNumber - 1, 5);
+            const cacheKey = `${currentLanguage}:${contextLines.join('\n')}`;
+            
+            // Check cache first
+            if (completionCache.has(cacheKey)) {
+                const cachedCompletion = completionCache.get(cacheKey);
+                showInlineCompletion(cachedCompletion, position);
+                return;
+            }
+            
+            // Cancel previous request if still pending
+            if (lastCompletionRequest) {
+                lastCompletionRequest.abort();
+            }
+            
+            // Create abort controller for this request
+            const abortController = new AbortController();
+            lastCompletionRequest = abortController;
+            
             const result = await window.ai.getInlineCompletion(text, {
                 line: position.lineNumber - 1,
-                column: position.column - 1
+                column: position.column - 1,
+                context: contextLines
             }, currentLanguage);
             
+            // Check if request was aborted
+            if (abortController.signal.aborted) return;
+            
             if (result.success && result.completion) {
+                // Cache the completion
+                completionCache.set(cacheKey, result.completion);
+                
+                // Limit cache size
+                if (completionCache.size > 50) {
+                    const firstKey = completionCache.keys().next().value;
+                    completionCache.delete(firstKey);
+                }
+                
                 showInlineCompletion(result.completion, position);
             }
         } catch (error) {
-            console.error('Inline completion error:', error);
+            if (error.name !== 'AbortError') {
+                console.error('Inline completion error:', error);
+            }
+        } finally {
+            lastCompletionRequest = null;
         }
-    }, 1000); // Delay to avoid too many API calls
+    }, 800); // Reduced delay for better responsiveness
+}
+
+function getContextLines(text, currentLine, contextSize) {
+    const lines = text.split('\n');
+    const start = Math.max(0, currentLine - contextSize);
+    const end = Math.min(lines.length, currentLine + contextSize + 1);
+    return lines.slice(start, end);
 }
 
 function showInlineCompletion(completion, position) {
-    // This is a simplified version. In a real implementation,
-    // you'd use Monaco's ghost text feature or similar
-    console.log('Inline completion:', completion);
+    // Enhanced inline completion display
+    if (!completion || completion.trim().length === 0) return;
+    
+    // Use Monaco's ghost text feature for better UX
+    const model = editor.getModel();
+    const range = new monaco.Range(
+        position.lineNumber,
+        position.column,
+        position.lineNumber,
+        position.column
+    );
+    
+    // Create ghost text decoration
+    const decoration = {
+        range: range,
+        options: {
+            after: {
+                content: completion,
+                inlineClassName: 'ghost-text',
+                cursorStops: 'none'
+            }
+        }
+    };
+    
+    // Remove previous decorations
+    const decorations = editor.deltaDecorations([], [decoration]);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        editor.deltaDecorations(decorations, []);
+    }, 5000);
 }
 
 // Context menu functions
@@ -1384,26 +1491,24 @@ function switchAiProviderTab(tabName) {
 
 async function saveAiConfig() {
     try {
-        const activeTab = document.querySelector('.tab-btn.active');
-        const providerType = activeTab ? activeTab.dataset.tab : 'openai';
+        // Get selected provider from radio buttons
+        const selectedProvider = document.querySelector('input[name="ai-provider"]:checked');
+        const providerType = selectedProvider ? selectedProvider.value : 'openai';
         
         let config = {};
         
         switch (providerType) {
             case 'openai':
-                const openaiApiKey = document.getElementById('openai-api-key').value;
-                const openaiModel = document.getElementById('openai-model').value;
-                config = { apiKey: openaiApiKey, model: openaiModel };
+                const openaiApiKey = elements.openaiApiKey.value;
+                if (!openaiApiKey) {
+                    showError('Please enter your OpenAI API key');
+                    return;
+                }
+                config = { apiKey: openaiApiKey, model: 'gpt-4o-mini' };
                 break;
             case 'ollama':
-                const ollamaUrl = document.getElementById('ollama-url').value;
-                const ollamaModel = document.getElementById('ollama-model').value;
-                config = { baseUrl: ollamaUrl, model: ollamaModel };
-                break;
-            case 'huggingface':
-                const hfApiKey = document.getElementById('hf-api-key').value;
-                const hfModel = document.getElementById('hf-model').value;
-                config = { apiKey: hfApiKey, model: hfModel };
+                const ollamaUrl = elements.ollamaUrl.value || 'http://localhost:11434';
+                config = { baseUrl: ollamaUrl, model: 'codellama' };
                 break;
         }
         
@@ -2485,8 +2590,189 @@ function exportAnalytics() {
     }
 }
 
+// Drag and Drop functionality
+function setupDragAndDrop() {
+    const editorArea = document.getElementById('editor-area');
+    
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        editorArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    // Highlight drop area when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        editorArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        editorArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    // Handle dropped files
+    editorArea.addEventListener('drop', handleDrop, false);
+}
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function highlight(e) {
+    e.currentTarget.classList.add('drag-over');
+}
+
+function unhighlight(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+        const file = files[0];
+        openFileFromPath(file.path);
+    }
+}
+
+// Recent files functionality
+function addToRecentFiles(filePath) {
+    if (!filePath) return;
+    
+    // Remove if already exists
+    recentFiles = recentFiles.filter(path => path !== filePath);
+    
+    // Add to beginning
+    recentFiles.unshift(filePath);
+    
+    // Limit to 10 recent files
+    if (recentFiles.length > 10) {
+        recentFiles = recentFiles.slice(0, 10);
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('recentFiles', JSON.stringify(recentFiles));
+    
+    updateRecentFilesDisplay();
+}
+
+function loadRecentFiles() {
+    const saved = localStorage.getItem('recentFiles');
+    if (saved) {
+        recentFiles = JSON.parse(saved);
+        updateRecentFilesDisplay();
+    }
+}
+
+function updateRecentFilesDisplay() {
+    const fileTree = elements.fileTree;
+    if (!fileTree) return;
+    
+    // Add recent files section if not exists
+    let recentSection = fileTree.querySelector('.recent-files-section');
+    if (!recentSection && recentFiles.length > 0) {
+        recentSection = document.createElement('div');
+        recentSection.className = 'recent-files-section';
+        recentSection.innerHTML = `
+            <div class="file-tree-header">
+                <i class="fas fa-clock"></i>
+                <span>Recent Files</span>
+            </div>
+            <div class="recent-files-list"></div>
+        `;
+        fileTree.insertBefore(recentSection, fileTree.firstChild);
+    }
+    
+    if (recentSection && recentFiles.length > 0) {
+        const recentList = recentSection.querySelector('.recent-files-list');
+        recentList.innerHTML = recentFiles.map(filePath => {
+            const fileName = filePath.split('/').pop() || filePath.split('\\').pop();
+            return `
+                <div class="file-tree-item recent-file" data-path="${filePath}">
+                    <i class="fas fa-file"></i>
+                    <span title="${filePath}">${fileName}</span>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click handlers for recent files
+        recentList.querySelectorAll('.recent-file').forEach(item => {
+            item.addEventListener('click', () => {
+                const filePath = item.dataset.path;
+                openFileFromPath(filePath);
+            });
+        });
+    }
+}
+
+// Enhanced file opening with recent files tracking
+async function openFileFromPath(filePath) {
+    try {
+        const result = await window.electronAPI.openFileFromPath({ filePath });
+        if (result.success) {
+            const fileName = filePath.split('/').pop() || filePath.split('\\').pop();
+            const language = getLanguageFromExtension(fileName);
+            
+            // Add to recent files
+            addToRecentFiles(filePath);
+            
+            // Open in editor
+            openFileInEditor(fileName, result.content, language, filePath);
+        } else {
+            showError('Failed to open file: ' + result.error);
+        }
+    } catch (error) {
+        showError('Error opening file: ' + error.message);
+    }
+}
+
+function getLanguageFromExtension(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    const languageMap = {
+        'js': 'javascript',
+        'jsx': 'javascript',
+        'ts': 'typescript',
+        'tsx': 'typescript',
+        'py': 'python',
+        'html': 'html',
+        'htm': 'html',
+        'css': 'css',
+        'json': 'json',
+        'md': 'markdown',
+        'xml': 'xml',
+        'sql': 'sql',
+        'php': 'php',
+        'rb': 'ruby',
+        'go': 'go',
+        'rs': 'rust',
+        'cpp': 'cpp',
+        'c': 'c',
+        'h': 'c',
+        'hpp': 'cpp',
+        'java': 'java',
+        'cs': 'csharp',
+        'swift': 'swift',
+        'kt': 'kotlin',
+        'scala': 'scala',
+        'sh': 'shell',
+        'bash': 'shell',
+        'ps1': 'powershell',
+        'yaml': 'yaml',
+        'yml': 'yaml',
+        'toml': 'toml',
+        'ini': 'ini',
+        'cfg': 'ini',
+        'conf': 'ini'
+    };
+    return languageMap[extension] || 'plaintext';
+}
+
 // Initialize the application when the DOM is loaded
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    loadRecentFiles(); // Load recent files on startup
+});
 
 // Handle window resize
 window.addEventListener('resize', () => {

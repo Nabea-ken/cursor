@@ -45,14 +45,8 @@
                 <button id="toggle-terminal-btn" class="toolbar-btn" title="Toggle AI Terminal">
                     <i class="fas fa-terminal"></i>
                 </button>
-                <button id="toggle-debug-btn" class="toolbar-btn" title="Toggle AI Debug Assistant">
-                    <i class="fas fa-bug"></i>
-                </button>
                 <button id="toggle-snippets-btn" class="toolbar-btn" title="Toggle AI Snippets">
                     <i class="fas fa-code"></i>
-                </button>
-                <button id="toggle-analytics-btn" class="toolbar-btn" title="Toggle AI Analytics">
-                    <i class="fas fa-chart-line"></i>
                 </button>
             </div>
         </div>
@@ -230,93 +224,6 @@
                 </div>
             </div>
 
-            <!-- AI Debug panel -->
-            <div id="debug-panel" class="debug-panel">
-                <div class="debug-header">
-                    <h3><i class="fas fa-bug"></i> AI Debug Assistant</h3>
-                    <button id="close-debug-btn" class="close-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="debug-content">
-                    <div class="debug-tabs">
-                        <button class="debug-tab-btn active" data-tab="analysis">Code Analysis</button>
-                        <button class="debug-tab-btn" data-tab="issues">Issues</button>
-                        <button class="debug-tab-btn" data-tab="suggestions">AI Suggestions</button>
-                        <button class="debug-tab-btn" data-tab="logs">Debug Logs</button>
-                    </div>
-                    
-                    <div class="debug-tab-content">
-                        <!-- Code Analysis Tab -->
-                        <div id="debug-analysis" class="debug-tab-panel active">
-                            <div class="debug-welcome">
-                                <i class="fas fa-search"></i>
-                                <h4>AI-Powered Code Analysis</h4>
-                                <p>Analyze your code for potential issues, bugs, and improvements using AI.</p>
-                                <div class="debug-actions">
-                                    <button id="analyze-current-file" class="btn-primary">
-                                        <i class="fas fa-file-code"></i> Analyze Current File
-                                    </button>
-                                    <button id="analyze-selected-code" class="btn-secondary">
-                                        <i class="fas fa-code"></i> Analyze Selected Code
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="analysis-results" class="analysis-results hidden">
-                                <div class="analysis-summary">
-                                    <h5>Analysis Summary</h5>
-                                    <div id="summary-content"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Issues Tab -->
-                        <div id="debug-issues" class="debug-tab-panel">
-                            <div class="issues-header">
-                                <h5>Detected Issues</h5>
-                                <button id="clear-issues" class="btn-small">Clear All</button>
-                            </div>
-                            <div id="issues-list" class="issues-list">
-                                <div class="no-issues">
-                                    <i class="fas fa-check-circle"></i>
-                                    <p>No issues detected. Run an analysis to check for problems.</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- AI Suggestions Tab -->
-                        <div id="debug-suggestions" class="debug-tab-panel">
-                            <div class="suggestions-header">
-                                <h5>AI Suggestions</h5>
-                                <button id="refresh-suggestions" class="btn-small">Refresh</button>
-                            </div>
-                            <div id="suggestions-list" class="suggestions-list">
-                                <div class="no-suggestions">
-                                    <i class="fas fa-lightbulb"></i>
-                                    <p>No suggestions available. Run an analysis to get AI recommendations.</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Debug Logs Tab -->
-                        <div id="debug-logs" class="debug-tab-panel">
-                            <div class="logs-header">
-                                <h5>Debug Logs</h5>
-                                <div class="logs-actions">
-                                    <button id="clear-logs" class="btn-small">Clear</button>
-                                    <button id="export-logs" class="btn-small">Export</button>
-                                </div>
-                            </div>
-                            <div id="debug-logs-list" class="debug-logs-list">
-                                <div class="no-logs">
-                                    <i class="fas fa-clipboard-list"></i>
-                                    <p>No debug logs yet. Start debugging to see logs here.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- AI Snippets panel -->
             <div id="snippets-panel" class="snippets-panel">
@@ -464,167 +371,6 @@
                 </div>
             </div>
 
-            <!-- AI Analytics panel -->
-            <div id="analytics-panel" class="analytics-panel">
-                <div class="analytics-header">
-                    <h3><i class="fas fa-chart-line"></i> AI Analytics</h3>
-                    <button id="close-analytics-btn" class="close-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="analytics-content">
-                    <div class="analytics-tabs">
-                        <button class="analytics-tab-btn active" data-tab="overview">Overview</button>
-                        <button class="analytics-tab-btn" data-tab="ai-usage">AI Usage</button>
-                        <button class="analytics-tab-btn" data-tab="performance">Performance</button>
-                        <button class="analytics-tab-btn" data-tab="insights">Insights</button>
-                    </div>
-                    
-                    <div class="analytics-tab-content">
-                        <!-- Overview Tab -->
-                        <div id="analytics-overview" class="analytics-tab-panel active">
-                            <div class="analytics-welcome">
-                                <i class="fas fa-chart-bar"></i>
-                                <h4>AI Analytics Dashboard</h4>
-                                <p>Track your AI usage patterns, performance metrics, and get insights into your coding habits.</p>
-                            </div>
-                            <div class="analytics-stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-robot"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <div class="stat-number" id="total-ai-requests">0</div>
-                                        <div class="stat-label">AI Requests</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <div class="stat-number" id="avg-response-time">0ms</div>
-                                        <div class="stat-label">Avg Response</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-code"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <div class="stat-number" id="lines-generated">0</div>
-                                        <div class="stat-label">Lines Generated</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-bug"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <div class="stat-number" id="issues-found">0</div>
-                                        <div class="stat-label">Issues Found</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- AI Usage Tab -->
-                        <div id="analytics-ai-usage" class="analytics-tab-panel">
-                            <div class="usage-section">
-                                <h5>AI Provider Usage</h5>
-                                <div id="provider-usage-chart" class="usage-chart">
-                                    <div class="chart-placeholder">
-                                        <i class="fas fa-chart-pie"></i>
-                                        <p>Provider usage statistics</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="usage-section">
-                                <h5>Feature Usage</h5>
-                                <div id="feature-usage-list" class="feature-list">
-                                    <div class="feature-item">
-                                        <span class="feature-name">Code Completion</span>
-                                        <span class="feature-count">0</span>
-                                    </div>
-                                    <div class="feature-item">
-                                        <span class="feature-name">Chat Assistant</span>
-                                        <span class="feature-count">0</span>
-                                    </div>
-                                    <div class="feature-item">
-                                        <span class="feature-name">Code Refactoring</span>
-                                        <span class="feature-count">0</span>
-                                    </div>
-                                    <div class="feature-item">
-                                        <span class="feature-name">Debug Analysis</span>
-                                        <span class="feature-count">0</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Performance Tab -->
-                        <div id="analytics-performance" class="analytics-tab-panel">
-                            <div class="performance-section">
-                                <h5>Response Times</h5>
-                                <div id="response-time-chart" class="performance-chart">
-                                    <div class="chart-placeholder">
-                                        <i class="fas fa-chart-line"></i>
-                                        <p>Response time trends</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="performance-section">
-                                <h5>System Performance</h5>
-                                <div class="performance-metrics">
-                                    <div class="metric-item">
-                                        <span class="metric-label">Memory Usage</span>
-                                        <span class="metric-value" id="memory-usage">0 MB</span>
-                                    </div>
-                                    <div class="metric-item">
-                                        <span class="metric-label">CPU Usage</span>
-                                        <span class="metric-value" id="cpu-usage">0%</span>
-                                    </div>
-                                    <div class="metric-item">
-                                        <span class="metric-label">Session Duration</span>
-                                        <span class="metric-value" id="session-duration">0m</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Insights Tab -->
-                        <div id="analytics-insights" class="analytics-tab-panel">
-                            <div class="insights-section">
-                                <h5>AI Insights</h5>
-                                <div id="ai-insights-list" class="insights-list">
-                                    <div class="insight-item">
-                                        <i class="fas fa-lightbulb"></i>
-                                        <div class="insight-content">
-                                            <h6>Most Used Feature</h6>
-                                            <p>Code completion is your most frequently used AI feature.</p>
-                                        </div>
-                                    </div>
-                                    <div class="insight-item">
-                                        <i class="fas fa-trending-up"></i>
-                                        <div class="insight-content">
-                                            <h6>Productivity Trend</h6>
-                                            <p>Your coding productivity has increased by 25% this week.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="insights-actions">
-                                <button id="refresh-analytics" class="btn-primary">
-                                    <i class="fas fa-sync-alt"></i> Refresh Data
-                                </button>
-                                <button id="export-analytics" class="btn-secondary">
-                                    <i class="fas fa-download"></i> Export Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Search Bar -->
@@ -708,78 +454,56 @@
     <div id="ai-provider-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-robot"></i> AI Provider Configuration</h3>
+                <h3><i class="fas fa-robot"></i> AI Provider Setup</h3>
                 <button id="close-ai-modal-btn" class="close-btn">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
-                <div class="ai-provider-tabs">
-                    <button class="tab-btn active" data-tab="openai">OpenAI</button>
-                    <button class="tab-btn" data-tab="ollama">Ollama (Local)</button>
-                    <button class="tab-btn" data-tab="huggingface">HuggingFace</button>
-                </div>
-                
-                <div class="tab-content active" id="openai-tab">
-                    <h4>OpenAI Configuration</h4>
-                    <p>Use OpenAI's GPT models for AI assistance. Requires API key.</p>
-                    <div class="input-group">
-                        <label for="openai-api-key">API Key:</label>
-                        <input type="password" id="openai-api-key" placeholder="sk-..." />
+                <div class="ai-provider-simple">
+                    <h4>Choose Your AI Provider</h4>
+                    <p>Select the AI provider you want to use for code assistance.</p>
+                    
+                    <div class="provider-options">
+                        <div class="provider-option">
+                            <input type="radio" id="provider-openai" name="ai-provider" value="openai" checked>
+                            <label for="provider-openai">
+                                <strong>OpenAI (Recommended)</strong>
+                                <span>Best quality, requires API key</span>
+                            </label>
+                        </div>
+                        <div class="provider-option">
+                            <input type="radio" id="provider-ollama" name="ai-provider" value="ollama">
+                            <label for="provider-ollama">
+                                <strong>Ollama (Free & Local)</strong>
+                                <span>Runs on your computer, no API key needed</span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="openai-model">Model:</label>
-                        <select id="openai-model">
-                            <option value="gpt-4o-mini">GPT-4o-mini (Recommended)</option>
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-3.5-turbo">GPT-3.5-turbo</option>
-                        </select>
+                    
+                    <div id="openai-config" class="provider-config">
+                        <div class="input-group">
+                            <label for="openai-api-key">OpenAI API Key:</label>
+                            <input type="password" id="openai-api-key" placeholder="sk-..." />
+                            <small>Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="tab-content" id="ollama-tab">
-                    <h4>Ollama Configuration</h4>
-                    <p>Use local AI models with Ollama. Free and runs locally.</p>
-                    <div class="input-group">
-                        <label for="ollama-url">Ollama URL:</label>
-                        <input type="text" id="ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434" />
-                    </div>
-                    <div class="input-group">
-                        <label for="ollama-model">Model:</label>
-                        <select id="ollama-model">
-                            <option value="codellama">CodeLlama (Recommended)</option>
-                            <option value="llama2">Llama2</option>
-                            <option value="mistral">Mistral</option>
-                            <option value="phi">Phi-2</option>
-                        </select>
-                    </div>
-                    <div class="ollama-install-info">
-                        <h5>Install Ollama:</h5>
-                        <p>Download from <a href="https://ollama.ai" target="_blank">ollama.ai</a></p>
-                        <p>Then run: <code>ollama pull codellama</code></p>
-                    </div>
-                </div>
-                
-                <div class="tab-content" id="huggingface-tab">
-                    <h4>HuggingFace Configuration</h4>
-                    <p>Use open source models from HuggingFace. Free tier available.</p>
-                    <div class="input-group">
-                        <label for="hf-api-key">API Key (Optional):</label>
-                        <input type="password" id="hf-api-key" placeholder="hf_..." />
-                    </div>
-                    <div class="input-group">
-                        <label for="hf-model">Model:</label>
-                        <select id="hf-model">
-                            <option value="microsoft/DialoGPT-medium">DialoGPT (Chat)</option>
-                            <option value="gpt2">GPT-2</option>
-                            <option value="microsoft/DialoGPT-small">DialoGPT Small</option>
-                        </select>
+                    
+                    <div id="ollama-config" class="provider-config hidden">
+                        <div class="input-group">
+                            <label for="ollama-url">Ollama URL:</label>
+                            <input type="text" id="ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434" />
+                        </div>
+                        <div class="ollama-info">
+                            <p><strong>First time setup:</strong></p>
+                            <p>1. Download Ollama from <a href="https://ollama.ai" target="_blank">ollama.ai</a></p>
+                            <p>2. Run: <code>ollama pull codellama</code></p>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="modal-actions">
-                    <button id="save-ai-config-btn" class="btn-primary">Save Configuration</button>
-                    <button id="test-ai-connection-btn" class="btn-secondary">Test Connection</button>
+                    <button id="save-ai-config-btn" class="btn-primary">Save & Connect</button>
                     <button id="cancel-ai-config-btn" class="btn-secondary">Cancel</button>
                 </div>
             </div>
